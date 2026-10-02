@@ -14,7 +14,7 @@ State below verified against the live project `xjftzfixjklgsowlcrzl` on
 | **Draft with AI** | `ai-draft` (v9, live) | `GROQ_API_KEY` | ✅ already set |
 | **Copy** | none | — | ✅ works |
 | **I posted it myself — mark as replied** | local record | Clerk sign-in only | ✅ works |
-| **Send reply** | `review-reply` (v15, live) | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | ❌ unset — see Part 3 |
+| **Send reply** | `review-reply` (v15, live) | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | ✅ set 2 Oct 2026 — gate passes, but see Part 3 |
 
 ---
 
@@ -44,6 +44,14 @@ export function repliesConfigured(): boolean {
   return hasEnv("GOOGLE_CLIENT_ID") && hasEnv("GOOGLE_CLIENT_SECRET");
 }
 ```
+
+> **Status — both are now set on `xjftzfixjklgsowlcrzl`** (pushed from
+> `.env.local` with the command in step 5 on 2 October 2026, and confirmed by
+> digest: the deployed `sha256` of each value matches the file). You can prove
+> the gate is open without ever seeing a secret: an unauthenticated POST to
+> `/functions/v1/review-reply` now answers **`401 Missing bearer token`** where
+> it used to answer **`409 … (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)`**. No
+> redeploy is involved — secrets are read per call.
 
 1. **Create a project** — <console.cloud.google.com> → project dropdown →
    **New Project** → e.g. *BIZLIT replies*.
@@ -93,13 +101,15 @@ export async function sendReply(_params: {
 }
 ```
 
-So Part 2 only changes the message you see:
+So the credentials only choose *which* of these two messages you see — and this
+deployment is already on the second:
 
 1. Without the two values → *"…it needs your own Google Business Profile
    connected (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET). Copy the suggested reply
-   across by hand for now."*
-2. With them → *"…Reading and replying are separate permissions: Google only
-   accepts replies to reviews it told us about directly…"*
+   across by hand for now."* ← what you saw before 2 Oct 2026
+2. With them (current) → *"…Reading and replying are separate permissions: Google
+   only accepts replies to reviews it told us about directly… Until that
+   connection is set up, copy the suggested reply across by hand."*
 
 The reason is structural. Reviews are read through **SerpApi / Apify**, i.e.
 scraped — Google only accepts a reply against a review id **it** minted, so a
@@ -117,6 +127,19 @@ replied**, which records `replied`, the reply text and the timestamp against the
 row.
 
 ---
+
+## Not pushed, deliberately
+
+Two keys sit in `.env.local` and are **not** function secrets, so they were left
+out of the update:
+
+| Key | Why not |
+| --- | --- |
+| `SCAN_JOB_SECRET` | No function reads it — it is documented in `env.example` for the scheduled ingestion job, which is not wired up yet. |
+| `EMAIL_FROM` | `client-mail` also needs `EMAIL_SMTP_HOST` / `EMAIL_SMTP_USER` / `EMAIL_SMTP_PASS`, which are not in the file; setting only the From header enables nothing, so the pair goes up together. |
+
+`GROQ_API_KEY`, `SERPAPI_KEY`, `APIFY_*`, `MALLARY_*` and `CLERK_JWT_ISSUER`
+already hold their values on the project.
 
 ## Verifying
 
