@@ -31,7 +31,8 @@ import { CustomerTable } from "../components/customer-table";
 import { Modal } from "../components/Modal";
 import { useActionToast, useToast, type ActionMessages } from "../components/Toast";
 import { cadenceLabel, daysAhead, money, relativeTime, shortDate, titleCase } from "../lib/format";
-import { CUSTOMER_MESSAGE_TYPES } from "../lib/options";
+import { CUSTOMER_MESSAGE_TYPES, subjectFor } from "../lib/options";
+import type { MailSendResult } from "../lib/integrations";
 import { useWorkspace, useWorkspaceData } from "../lib/workspace";
 import type { Client, MailAccount, MessageType, SendFrequency } from "../lib/types";
 
@@ -53,26 +54,6 @@ const EMPTY_FORM = {
   industry: "Beauty & cosmetics",
   tier: "starter" as Client["tier"],
 };
-
-function subjectFor(client: Client, types: MessageType[]): string {
-  const primary = types[0] ?? "weekly_report";
-  switch (primary) {
-    case "new_stock":
-      return `New at your competitors, ${client.company}`;
-    case "two_day_checkin":
-      return `Mid-week check-in — 3 moves worth knowing`;
-    case "platform_info":
-      return `New data on your BIZLIT desk`;
-    case "deals":
-      return `Live deals you can promote today`;
-    case "competitor_alert":
-      return `Competitor alert: price and promo changes`;
-    case "review_update":
-      return `Review scan: latest customer feedback`;
-    default:
-      return `Your weekly market watch report`;
-  }
-}
 
 export function ClientsPage() {
   const toast = useToast();
@@ -162,8 +143,16 @@ export function ClientsPage() {
       return;
     }
     void actionToast(() => actions.sendMessages(ids), {
-      success: `${ids.length} personalised email${ids.length > 1 ? "s" : ""} queued for sending.`,
-      failure: "Those emails could not be queued.",
+      // The gateway answers per customer, so a partial batch is reported as
+      // what it was rather than as a flat success.
+      success: (result) => {
+        const outcome = result as MailSendResult;
+        if (outcome.failed > 0) {
+          return `${outcome.sent} sent, ${outcome.failed} failed — the failures are in the email activity log.`;
+        }
+        return `${outcome.sent} email${outcome.sent === 1 ? "" : "s"} sent.`;
+      },
+      failure: "Those emails could not be sent.",
     });
     setQueued([]);
   }
@@ -331,7 +320,7 @@ export function ClientsPage() {
                       <span className="text-[11px] font-normal text-slate-500">{c.email}</span>
                     </p>
                     <p className="truncate text-[11px] text-slate-600">
-                      {subjectFor(c, account.messageTypes)}
+                      {subjectFor(c.company, account.messageTypes)}
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-400">
                       {cadenceLabel(account.sendFrequency)} · due {shortDate(c.nextSendAt)}
@@ -388,7 +377,7 @@ export function ClientsPage() {
                               ? "good"
                               : m.status === "opened"
                                 ? "info"
-                                : m.status === "bounced"
+                                : m.status === "bounced" || m.status === "failed"
                                   ? "bad"
                                   : "neutral"
                           }

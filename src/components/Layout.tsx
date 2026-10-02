@@ -388,7 +388,7 @@ export function Layout({
             {brand} · competitor and client monitoring workspace.{" "}
             {demoMode
               ? "Demo mode: connect Clerk and Supabase to run on your own data."
-              : "Scans run on the cadence set per source; email sends are logged to your workspace."}
+              : "Scans run on the cadence set per source; customer emails are delivered over your mail account and logged in your workspace."}
           </footer>
         </div>
       </div>

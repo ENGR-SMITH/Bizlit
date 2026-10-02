@@ -31,6 +31,8 @@ _shared/
   reviews.ts         review readers (SerpApi + Apify), normaliser, reply gate (Phase 3)
   mallary.ts         Mallary client: media upload, post creation, job status (Phase 4)
   llm.ts             OpenAI-compatible JSON client for the AI drafting tasks (Phase 5)
+  smtp.ts            SMTP client + RFC 5322 encoder for client-mail (Spacemail by default)
+  mail.ts            customer update composition, subjects, and the server's copy of the send schedule
 integrations-status/
   index.ts           reports which providers are configured
 serp-scan/
@@ -63,6 +65,9 @@ social-accounts/
   index.ts           mirrors the accounts connected in Mallary into `social_accounts`
 ai-draft/
   index.ts           reply drafts, ad angles and keyword themes — always a draft, never a send
+client-mail/
+  index.ts           customer email delivery over SMTP — the desk's Send buttons, plus the
+                     MAIL_JOB_SECRET-authenticated run that mails everyone past their next_send_at
 ```
 
 `web-contacts-scan` is the one function that writes nothing the user did not confirm: it reads a
@@ -124,6 +129,42 @@ supabase secrets set \
   LLM_BASE_URL=https://api.groq.com/openai/v1 \
   INTEGRATIONS_WEBHOOK_SECRET=...
 ```
+
+Email delivery has its own server-only set, read by `client-mail` (`_shared/smtp.ts` /
+`_shared/mail.ts`). Spacemail needs no API key — it authenticates the SMTP session with the mailbox
+credentials:
+
+```bash
+supabase secrets set \
+  EMAIL_SMTP_HOST=mail.spacemail.com \
+  EMAIL_SMTP_PORT=465 \
+  EMAIL_SMTP_SECURE=true \
+  EMAIL_SMTP_USER=no-reply@yourdomain.com \
+  EMAIL_SMTP_PASS=... \
+  EMAIL_FROM="Your Brand <no-reply@yourdomain.com>" \
+  EMAIL_REPLY_TO=...            # optional
+supabase secrets set MAIL_JOB_SECRET=...   # optional: enables the scheduled run
+```
+
+Left unset, `client-mail` answers 409 naming the variables — the same "not configured on this
+deployment" convention the providers use, never a connection attempt that cannot succeed. With the
+`EMAIL_SMTP_*` set, the desk's Send buttons deliver immediately. `MAIL_JOB_SECRET` additionally arms
+the scheduled mode: a cron job presenting it in `x-mail-job-secret` mails every **active** customer
+whose `next_send_at` has passed, records each outcome in `sent_messages`, and reschedules only the
+ones the server accepted — a refused address stays due for the next run rather than losing its
+cadence:
+
+```bash
+# The scheduled run — one call per cadence (Supabase Cron, pg_cron or any cron).
+# Anon key present because the platform JWT check is off and the secret is what authenticates.
+curl -s -X POST "$SUPABASE_URL/functions/v1/client-mail" \
+  -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+  -H "x-mail-job-secret: $MAIL_JOB_SECRET"
+```
+
+A wrong or absent secret does not reach that path: it falls through to the session check, which a
+cron job cannot pass, so the run is refused with a 401.
+
 
 Instead of listing pairs, you can push the values straight from the repo-root `.env.local` (where
 they are kept, gitignored):
@@ -278,6 +319,7 @@ supabase functions deploy provider-webhook --no-verify-jwt
 supabase functions deploy publish-ad --no-verify-jwt
 supabase functions deploy social-accounts --no-verify-jwt
 supabase functions deploy ai-draft --no-verify-jwt
+supabase functions deploy client-mail --no-verify-jwt
 ```
 
 Verify locally after signing in from the app:

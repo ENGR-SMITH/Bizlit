@@ -70,6 +70,34 @@ export const CUSTOMER_MESSAGE_TYPES = MESSAGE_TYPES.filter(
   (type) => type.value !== "competitor_alert",
 );
 
+/**
+ * The subject a queued send shows on the schedule tab.
+ *
+ * The mail gateway mirrors this in `supabase/functions/_shared/mail.ts`,
+ * because a scheduled send has no browser to ask — the preview here and the
+ * message that lands in the inbox have to be the same one, and `tests/mail.test.tsx`
+ * asserts the two stay identical.
+ */
+export function subjectFor(company: string, types: MessageType[]): string {
+  const primary = types[0] ?? "weekly_report";
+  switch (primary) {
+    case "new_stock":
+      return `New at your competitors, ${company}`;
+    case "two_day_checkin":
+      return `Mid-week check-in — 3 moves worth knowing`;
+    case "platform_info":
+      return `New data on your BIZLIT desk`;
+    case "deals":
+      return `Live deals you can promote today`;
+    case "competitor_alert":
+      return `Competitor alert: price and promo changes`;
+    case "review_update":
+      return `Review scan: latest customer feedback`;
+    default:
+      return `Your weekly market watch report`;
+  }
+}
+
 export function detectedTimezone(): string {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";

@@ -220,7 +220,8 @@ export interface SentMessage {
   subject: string;
   types: MessageType[];
   sentAt: string;
-  status: "delivered" | "opened" | "clicked" | "bounced";
+  /** `failed` is a send the mail server refused — it is kept so the activity log is honest. */
+  status: "delivered" | "opened" | "clicked" | "bounced" | "failed";
 }
 
 export interface MailAccount {

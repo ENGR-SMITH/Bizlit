@@ -146,7 +146,8 @@ scores with focus priorities, and the competitor benchmark set behind them.
 **Clients** — your mail account (login email, reply-to, signature, digest), a form to add current
 active customers, the customer list with inline status/frequency, a per-customer message schedule
 (new stock, 2-day check-in, platform info, deals, competitor alert, review update, weekly report), a
-customers-to-mail queue that logs sends and reschedules, and the recent email activity log.
+customers-to-mail queue that actually delivers over Spacemail SMTP, records what the mail server said
+for each customer and reschedules only the ones it accepted, and the recent email activity log.
 
 **My Business** — SEO and GEO scores, traffic and channels, top SEO keywords and top GEO prompts for
 the week, downloadable weekly SEO/GEO report, 2-month review analysis per source plus the latest
@@ -219,6 +220,7 @@ the result to a tenant-scoped table.
 | **Reviews** | Reviews from six platforms, read through the SerpApi and Apify accounts above. Not a vendor of its own — see §3.3 of the blueprint | `reviews-sync`, `review-reply` |
 | **AI drafting** | Reply drafts for your reviews, original ad angles from a competitor's best post, and intent themes for keyword suggestions. **Every draft is a draft** — nothing is sent, posted or created without you | `ai-draft` |
 | **Mallary.ai** | Publishing a finished ad design to your connected social accounts | `publish-ad`, `social-accounts` |
+| **Spacemail SMTP** | Delivering the customer update emails — the desk's Send buttons and the scheduled run that mails whoever is due. SMTP credentials are server-side secrets like every other key here | `client-mail` |
 | — | Which providers the server is configured for, and the caps it enforces | `integrations-status` |
 | — | Inbound webhooks from both providers (signature-verified, replay-protected) | `provider-webhook` |
 
@@ -252,7 +254,10 @@ paid for again. See `docs/SOURCE_MANAGEMENT_BLUEPRINT.md` Phase 4.
 - The scheduled worker that fetches supplier/competitor **pages** (non-API sources) and writes rows.
   "Scan now" queues a `scan_runs` row and updates the last-scan time, and the provider gateway covers
   everything that has an API; this worker is the next piece.
-- Real email delivery for the client schedule (sends are logged to `sent_messages` today).
+- The **cron entry** that calls `client-mail` with `MAIL_JOB_SECRET` on a cadence. Delivery itself is
+  built — the desk's Send buttons send through Spacemail SMTP and the function has a scheduled mode
+  that mails every customer past their `next_send_at` — but nothing invokes that mode yet, so due
+  emails go out when you press Send. See `supabase/functions/README.md` for the one-line trigger.
 - Product photo shoots / ad exports uploaded to the `ad-assets` bucket (paths and signed URLs are
   already wired).
 - Code splitting: the Clerk + Supabase bundle is one chunk today.

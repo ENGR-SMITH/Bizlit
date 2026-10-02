@@ -441,6 +441,12 @@ verify_jwt = false
 [functions.publish-ad]
 verify_jwt = false
 
+# Customer email delivery. Signed-in callers are verified by requireCaller, and
+# the scheduled run authenticates with MAIL_JOB_SECRET of its own — neither is a
+# Supabase token, so the platform check must stay off.
+[functions.client-mail]
+verify_jwt = false
+
 [functions.social-accounts]
 verify_jwt = false
 

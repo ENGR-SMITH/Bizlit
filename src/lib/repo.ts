@@ -980,7 +980,14 @@ export async function deleteClientRow(clientId: string) {
 
 export async function logSentMessages(
   businessId: string,
-  messages: { clientId: string; clientName: string; subject: string; types: MessageType[] }[],
+  messages: {
+    clientId: string;
+    clientName: string;
+    subject: string;
+    types: MessageType[];
+    /** What the mail server actually did. Defaults to delivered for the demo path. */
+    status?: "delivered" | "failed";
+  }[],
 ) {
   const db = requireSupabase();
   const now = new Date().toISOString();
@@ -991,7 +998,7 @@ export async function logSentMessages(
       client_name: m.clientName,
       subject: m.subject,
       types: m.types,
-      status: "delivered",
+      status: m.status ?? "delivered",
       sent_at: now,
     })),
   );

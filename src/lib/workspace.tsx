@@ -51,6 +51,7 @@ import {
   type AngleDraftResult,
   type ClusterDraftResult,
   type CompetitorBenchmarkResult,
+  type MailSendResult,
   type PublishAdResult,
   type ReplyDraftResult,
   type ReviewSyncResult,
@@ -62,6 +63,7 @@ import {
   type BuyListResult,
   type TrafficScanResult,
 } from "./integrations";
+import { subjectFor } from "./options";
 import {
   sampleAdAngles,
   sampleKeywordClusters,
@@ -267,7 +269,7 @@ export interface WorkspaceActions {
   }) => Promise<void>;
   updateClient: (clientId: string, patch: Partial<Client>) => Promise<void>;
   removeClient: (clientId: string) => Promise<void>;
-  sendMessages: (clientIds: string[]) => Promise<number>;
+  sendMessages: (clientIds: string[]) => Promise<MailSendResult>;
   saveMailAccount: (account: MailAccount) => Promise<void>;
   toggleBuyList: (recommendationId: string, on: boolean) => Promise<void>;
   /**
@@ -609,7 +611,7 @@ function DemoWorkspaceProvider({ children }: { children: ReactNode }) {
                 id: `sm-${Date.now()}-${i}`,
                 clientId: c.id,
                 clientName: c.name,
-                subject: `Update for ${c.company}`,
+                subject: subjectFor(c.company || c.name, c.messageTypes),
                 types: c.messageTypes,
                 sentAt: now,
                 status: "delivered" as const,
@@ -623,7 +625,9 @@ function DemoWorkspaceProvider({ children }: { children: ReactNode }) {
             ),
           };
         });
-        return count;
+        // Demo mode has no mail server, so the batch is recorded as sent — the
+        // same preview the live desk gives, without the transport.
+        return { sent: count, failed: 0 };
       },
       async saveMailAccount(account) {
         // One cadence and one set of message types for the whole list — saving the
@@ -1200,7 +1204,73 @@ function LiveWorkspaceProvider({ children }: { children: ReactNode }) {
       },
       async sendMessages(clientIds) {
         const targets = (data?.clients ?? []).filter((c) => clientIds.includes(c.id));
+        if (!targets.length) return { sent: 0, failed: 0 };
         const now = new Date().toISOString();
+
+        if (!dbEnabled) {
+          // No database, no transport: record the batch locally, exactly as the
+          // demo provider does, so the desk still shows what would go out.
+          patchData((current) => ({
+            ...current,
+            sentMessages: [
+              ...targets.map((c, i) => ({
+                id: `sm-${Date.now()}-${i}`,
+                clientId: c.id,
+                clientName: c.name,
+                subject: subjectFor(c.company || c.name, c.messageTypes),
+                types: c.messageTypes,
+                sentAt: now,
+                status: "delivered" as const,
+              })),
+              ...current.sentMessages,
+            ],
+            clients: current.clients.map((c) =>
+              clientIds.includes(c.id)
+                ? { ...c, lastContacted: now, nextSendAt: nextSendFrom(c.frequency, c.messageTypes) }
+                : c,
+            ),
+          }));
+          return { sent: targets.length, failed: 0 };
+        }
+        if (!profile) throw new Error("Your workspace is still loading — try again in a moment.");
+
+        // Real delivery: the gateway speaks SMTP itself (the mailbox credentials
+        // are server-side secrets), sends customer by customer and reports what
+        // each attempt actually did. The browser never sees the password.
+        let result: MailSendResult;
+        try {
+          result = await invokeGateway<MailSendResult>("client-mail", {
+            businessId: profile.id,
+            clientIds: targets.map((c) => c.id),
+          });
+        } catch (cause) {
+          const message = cause instanceof Error ? cause.message : "Those emails could not be sent.";
+          setError(message);
+          throw new Error(message);
+        }
+
+        const outcomes = new Map((result.results ?? []).map((r) => [r.clientId, r]));
+        const subjectOf = (c: Client) =>
+          outcomes.get(c.id)?.subject ?? subjectFor(c.company || c.name, c.messageTypes);
+
+        // The activity log is written from the server's own report, so a send
+        // the server refused is recorded as a failure instead of as delivered.
+        await withBusiness(async (business) => {
+          await logSentMessages(
+            business.id,
+            targets.map((c) => ({
+              clientId: c.id,
+              clientName: c.name,
+              subject: subjectOf(c),
+              types: c.messageTypes,
+              status: outcomes.get(c.id)?.status ?? "failed",
+            })),
+          );
+        });
+
+        const delivered = new Set(
+          targets.filter((c) => outcomes.get(c.id)?.status === "delivered").map((c) => c.id),
+        );
         patchData((current) => ({
           ...current,
           sentMessages: [
@@ -1208,41 +1278,28 @@ function LiveWorkspaceProvider({ children }: { children: ReactNode }) {
               id: `sm-${Date.now()}-${i}`,
               clientId: c.id,
               clientName: c.name,
-              subject: `Update for ${c.company || c.name}`,
+              subject: subjectOf(c),
               types: c.messageTypes,
               sentAt: now,
-              status: "delivered" as const,
+              status: outcomes.get(c.id)?.status ?? "failed",
             })),
             ...current.sentMessages,
           ],
+          // Only an accepted send moves the schedule forward — the server has
+          // already advanced `next_send_at` for these, and a failure stays due
+          // so the next run retries it rather than skipping a cadence.
           clients: current.clients.map((c) =>
-            clientIds.includes(c.id)
+            delivered.has(c.id)
               ? { ...c, lastContacted: now, nextSendAt: nextSendFrom(c.frequency, c.messageTypes) }
               : c,
           ),
         }));
-        if (dbEnabled) {
-          await withBusiness(async (business) => {
-            await logSentMessages(
-              business.id,
-              targets.map((c) => ({
-                clientId: c.id,
-                clientName: c.name,
-                subject: `Update for ${c.company || c.name}`,
-                types: c.messageTypes,
-              })),
-            );
-            await Promise.all(
-              targets.map((c) =>
-                updateClientRow(c.id, {
-                  lastContacted: now,
-                  nextSendAt: nextSendFrom(c.frequency, c.messageTypes),
-                }),
-              ),
-            );
-          });
+
+        if (result.sent === 0) {
+          const reason = (result.results ?? []).find((r) => r.error)?.error;
+          throw new Error(reason ?? "The mail server did not accept any of the messages.");
         }
-        return targets.length;
+        return { sent: result.sent, failed: result.failed };
       },
       async saveMailAccount(account) {
         // One cadence and one set of message types for the whole list — saving the

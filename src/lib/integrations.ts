@@ -376,6 +376,23 @@ export async function invokeGateway<T = unknown>(
   return data as T;
 }
 
+/** What one customer's send actually did, as the mail gateway reports it. */
+export interface MailSendOutcome {
+  clientId: string;
+  status: "delivered" | "failed";
+  /** The subject that was (or would have been) mailed — the desk logs it verbatim. */
+  subject: string;
+  /** Why the server refused it, when it did. */
+  error?: string;
+}
+
+/** The `client-mail` gateway's answer: counts for the toast, per-customer detail for the log. */
+export interface MailSendResult {
+  sent: number;
+  failed: number;
+  results?: MailSendOutcome[];
+}
+
 export interface SerpScanResult {
   keywords: number;
   rankings: number;

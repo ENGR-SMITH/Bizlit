@@ -14,7 +14,8 @@ export function useToast() {
 
 /** What to say when an action succeeds, and a fallback for when it does not. */
 export interface ActionMessages {
-  success: string;
+  /** Fixed, or built from what the action resolved with — a send reports how many went out. */
+  success: string | ((result: unknown) => string);
   failure: string;
 }
 
@@ -31,8 +32,8 @@ export function useActionToast() {
   return useCallback(
     async (run: () => Promise<unknown>, messages: ActionMessages) => {
       try {
-        await run();
-        toast(messages.success);
+        const result = await run();
+        toast(typeof messages.success === "function" ? messages.success(result) : messages.success);
       } catch (cause) {
         toast(cause instanceof Error ? cause.message : messages.failure);
       }
