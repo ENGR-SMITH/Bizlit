@@ -1,14 +1,16 @@
 import type { ReactNode } from "react";
+import { useId } from "react";
 import {
   Area,
   AreaChart,
   PolarAngleAxis,
   RadialBar,
   RadialBarChart,
+  Tooltip,
   XAxis,
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
 import type { TrafficPoint } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -129,7 +131,8 @@ export function ScoreRadialCard({
   className?: string;
 }) {
   const progress = clamp((value / max) * 100, 0, 100);
-  const data = [{ name: label, progress, fill: color }];
+  const gradientId = `radial-${useId().replace(/:/g, "")}`;
+  const data = [{ name: label, progress, fill: `url(#${gradientId})` }];
   const config = { progress: { label, color } } satisfies ChartConfig;
 
   return (
@@ -146,6 +149,15 @@ export function ScoreRadialCard({
                 outerRadius={40}
                 startAngle={90}
               >
+                <defs>
+                  <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={color} />
+                    <stop
+                      offset="100%"
+                      stopColor={`color-mix(in srgb, ${color} 55%, white)`}
+                    />
+                  </linearGradient>
+                </defs>
                 <PolarAngleAxis
                   angleAxisId={0}
                   axisLine={false}
@@ -158,7 +170,7 @@ export function ScoreRadialCard({
                   background
                   cornerRadius={10}
                   dataKey="progress"
-                  fill={color}
+                  fill={`url(#${gradientId})`}
                 />
               </RadialBarChart>
             </ChartContainer>
@@ -242,7 +254,7 @@ export function TrafficTrendCard({
 }) {
   const positive = changePct >= 0;
   const stroke = positive ? color : "var(--destructive)";
-  const gradientId = "traffic-trend-fill";
+  const gradientId = `traffic-trend-${useId().replace(/:/g, "")}`;
   const config = { visits: { label, color: stroke } } satisfies ChartConfig;
 
   // The workspace stores the movement as a percentage, so recover the absolute
@@ -290,18 +302,30 @@ export function TrafficTrendCard({
             <AreaChart data={points} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
               <defs>
                 <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="5%" stopColor={stroke} stopOpacity={0.3} />
-                  <stop offset="95%" stopColor={stroke} stopOpacity={0} />
+                  <stop offset="0%" stopColor={stroke} stopOpacity={0.45} />
+                  <stop offset="60%" stopColor={stroke} stopOpacity={0.12} />
+                  <stop offset="100%" stopColor={stroke} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="label" hide />
+              <Tooltip
+                cursor={{ stroke, strokeWidth: 1, strokeDasharray: "4 4" }}
+                content={<ChartTooltipContent />}
+              />
               <Area
                 dataKey="visits"
+                animationDuration={900}
                 fill={`url(#${gradientId})`}
-                fillOpacity={0.4}
+                fillOpacity={1}
                 stroke={stroke}
-                strokeWidth={1.5}
+                strokeWidth={2}
                 type="monotone"
+                activeDot={{
+                  r: 4.5,
+                  strokeWidth: 2,
+                  stroke: "#ffffff",
+                  fill: stroke,
+                }}
               />
             </AreaChart>
           </ChartContainer>

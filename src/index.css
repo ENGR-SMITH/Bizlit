@@ -22,6 +22,60 @@ html {
   }
 }
 
+/*
+ * Chart motion: a line that draws itself, an area that settles in, bars that
+ * grow from the left, the ring that sweeps to its value, and the endpoint dot
+ * that pops once the line has arrived. All disabled under reduced motion.
+ */
+@keyframes chart-draw {
+  from {
+    stroke-dashoffset: 100;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes chart-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes chart-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@keyframes chart-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes chart-ring {
+  from {
+    stroke-dashoffset: var(--ring-len);
+  }
+  to {
+    stroke-dashoffset: var(--ring-off);
+  }
+}
+
 @layer utilities {
   /* Gentle entrance for landing-page blocks. */
   .mw-rise {
@@ -37,11 +91,34 @@ html {
       linear-gradient(to bottom, rgba(15, 23, 42, 0.05) 1px, transparent 1px);
     background-size: 46px 46px;
   }
+  .chart-draw {
+    animation: chart-draw 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  .chart-fade {
+    animation: chart-fade 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+  }
+  .chart-grow {
+    animation: chart-grow 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: left center;
+  }
+  .chart-pop {
+    animation: chart-pop 0.4s cubic-bezier(0.22, 1, 0.36, 1) 1s both;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .chart-ring {
+    animation: chart-ring 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .mw-rise,
-  .mw-rise-slow {
+  .mw-rise-slow,
+  .chart-draw,
+  .chart-fade,
+  .chart-grow,
+  .chart-pop,
+  .chart-ring {
     animation: none;
   }
 }
@@ -119,11 +196,11 @@ html {
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-1: #4f46e5; /* indigo — brand */
+  --chart-2: #7c3aed; /* violet */
+  --chart-3: #06b6d4; /* cyan */
+  --chart-4: #f59e0b; /* amber */
+  --chart-5: #f43f5e; /* rose */
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -154,11 +231,11 @@ html {
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --chart-1: #818cf8; /* indigo */
+  --chart-2: #a78bfa; /* violet */
+  --chart-3: #22d3ee; /* cyan */
+  --chart-4: #fbbf24; /* amber */
+  --chart-5: #fb7185; /* rose */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
