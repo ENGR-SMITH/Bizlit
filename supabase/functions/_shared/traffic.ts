@@ -1,4 +1,6 @@
 import { getEnv } from "./env.ts";
+import { HttpError } from "./errors.ts";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /**
  * Website traffic, read from SimilarWeb through Apify.
@@ -162,4 +164,123 @@ export function byDomain(items: Record<string, unknown>[]): Map<string, DomainTr
     if (traffic) map.set(traffic.domain, traffic);
   }
   return map;
+}
+
+/* ------------------------------------------------- writing the time series */
+
+/**
+ * How many points one monthly series keeps. Twelve months is a full window:
+ * beyond it the bars stop being told apart and the labels stop being read, so
+ * the oldest month ages out instead of being drawn.
+ */
+export const SERIES_WINDOW = 12;
+
+/** One point of a stored time series, as far as a rewrite needs to know it. */
+export interface StoredPoint {
+  label: string;
+  sortOrder: number;
+}
+
+/** What one rewrite of a series should delete and insert. */
+export interface SeriesRestatement {
+  /** Labels whose stored rows go: the ones being restated, and the ones that aged out. */
+  dropLabels: string[];
+  /** The incoming points that fit inside the window, in the order they should be stored. */
+  insert: { label: string; value: number; sortOrder: number }[];
+}
+
+/**
+ * Decides how a series is rewritten so **history survives a restatement**.
+ *
+ * The provider only ever returns its most recent window (SimilarWeb hands back
+ * three months), and replacing the stored rows wholesale is what left the traffic
+ * charts pinned at three bars however often the scan ran: each run threw away the
+ * months before it. The rules here keep both properties the desk needs —
+ *
+ *   - a label the provider *does* return is restated (old rows for it are dropped
+ *     and the new value stored), so a re-read month cannot leave two values behind;
+ *   - labels it does not return are kept until they fall outside `window`, so past
+ *     months accumulate into a chart that grows instead of resetting; and
+ *   - only `window` points are stored at all, which is what keeps the chart
+ *     readable after a year of scans.
+ *
+ * Nothing here invents a value: every stored point was read on the day it claims.
+ */
+export function seriesRestatement(
+  stored: StoredPoint[],
+  incoming: { label: string; value: number; sortOrder: number }[],
+  window = SERIES_WINDOW,
+): SeriesRestatement {
+  const incomingLabels = new Set(incoming.map((point) => point.label));
+  // Survivors are the months the provider no longer reports — the history.
+  const survivors = stored.filter((point) => !incomingLabels.has(point.label));
+
+  const kept = [...survivors, ...incoming]
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+    .slice(-Math.max(1, window));
+  const keptLabels = new Set(kept.map((point) => point.label));
+
+  return {
+    // A stored row goes when it is being restated, or when it fell out of the window.
+    dropLabels: stored
+      .filter((point) => incomingLabels.has(point.label) || !keptLabels.has(point.label))
+      .map((point) => point.label),
+    insert: incoming.filter((point) => keptLabels.has(point.label)),
+  };
+}
+
+/**
+ * Writes one time-series kind for a business (and, for a rival, for that
+ * competitor): read what is stored, restate the labels the provider returned,
+ * keep the history that fits the window, drop the rest.
+ *
+ * A plain read-delete-insert rather than an upsert, because these tables have no
+ * unique key to upsert against. Only the one `kind` is touched, so the channel,
+ * surface and review series other scans write are never at risk.
+ */
+export async function writeSeries(
+  db: SupabaseClient,
+  table: "my_metrics" | "competitor_metrics",
+  business: string,
+  competitorId: string | null,
+  kind: string,
+  rows: { label: string; value: number; sortOrder: number }[],
+  window = SERIES_WINDOW,
+): Promise<void> {
+  if (!rows.length) return;
+
+  let storedQuery = db
+    .from(table)
+    .select("label, sort_order")
+    .eq("business_id", business)
+    .eq("kind", kind);
+  if (competitorId) storedQuery = storedQuery.eq("competitor_id", competitorId);
+  const { data: storedRows, error: readError } = await storedQuery;
+  if (readError) throw new HttpError(500, readError.message);
+
+  const stored: StoredPoint[] = (storedRows ?? []).map((row: { label: string; sort_order: number }) => ({
+    label: String(row.label),
+    sortOrder: Number(row.sort_order ?? 0),
+  }));
+  const plan = seriesRestatement(stored, rows, window);
+
+  if (plan.dropLabels.length) {
+    let removal = db.from(table).delete().eq("business_id", business).eq("kind", kind);
+    if (competitorId) removal = removal.eq("competitor_id", competitorId);
+    const { error: deleteError } = await removal.in("label", plan.dropLabels);
+    if (deleteError) throw new HttpError(500, deleteError.message);
+  }
+
+  if (plan.insert.length) {
+    const payload = plan.insert.map((row) => ({
+      business_id: business,
+      ...(competitorId ? { competitor_id: competitorId } : {}),
+      kind,
+      label: row.label,
+      value: row.value,
+      sort_order: row.sortOrder,
+    }));
+    const { error } = await db.from(table).insert(payload);
+    if (error) throw new HttpError(500, error.message);
+  }
 }

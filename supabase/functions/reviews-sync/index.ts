@@ -17,7 +17,9 @@ import {
   readReviewScrape,
   readerFor,
   reviewRunFinished,
+  reviewTrendLabel,
   reviewsConfigured,
+  REVIEW_TREND_WINDOW,
   sentimentForRating,
   startReviewScrape,
   suggestedAction,
@@ -72,11 +74,6 @@ const MAX_REVIEWS_PER_CALL = 20;
 
 /** How many rows a sync is willing to read back for de-duplication. */
 const EXISTING_LIMIT = 500;
-
-/** Current calendar month label, matching the sample series ("Sep"). */
-function monthLabel(now = new Date()): string {
-  return now.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
-}
 
 Deno.serve(async (req) => {
   const preflightResponse = preflight(req);
@@ -444,7 +441,7 @@ async function refreshSources(
     priorScore.set(String(row.source), Number(row.score ?? 0));
   }
 
-  const label = monthLabel();
+  const label = reviewTrendLabel();
   let newReviews = 0;
   let weightedSum = 0;
   let weightedCount = 0;
@@ -485,7 +482,14 @@ async function refreshSources(
   };
 }
 
-/** One trend point per (source, month): update today's, insert on a new month. */
+/**
+ * One trend point per (source, day): update today's, insert on a new day.
+ *
+ * The day granularity is deliberate — a month label meant a workspace's first
+ * weeks of scanning produced a single bar, with nothing to compare it against.
+ * The series is then trimmed to `REVIEW_TREND_WINDOW` days so it stays a chart a
+ * person can read rather than a year of columns.
+ */
 async function upsertSeriesPoint(
   db: Db,
   businessId: string,
@@ -519,4 +523,25 @@ async function upsertSeriesPoint(
   await db
     .from("my_review_series")
     .insert({ business_id: businessId, source, label, score, sort_order: nextOrder });
+
+  // Age out the days past the window. A new point is the only thing that can
+  // grow the series, so pruning here is enough to hold it at the window.
+  const { data: recent } = await db
+    .from("my_review_series")
+    .select("sort_order")
+    .eq("business_id", businessId)
+    .eq("source", source)
+    .order("sort_order", { ascending: false })
+    .limit(REVIEW_TREND_WINDOW);
+  const orders = (recent ?? []).map((point) => Number(point.sort_order ?? 0));
+  if (orders.length >= REVIEW_TREND_WINDOW) {
+    const cutoff = orders[orders.length - 1];
+    const { error: trimError } = await db
+      .from("my_review_series")
+      .delete()
+      .eq("business_id", businessId)
+      .eq("source", source)
+      .lt("sort_order", cutoff);
+    if (trimError) throw new HttpError(500, trimError.message);
+  }
 }

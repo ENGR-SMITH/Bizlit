@@ -1,4 +1,5 @@
 import { requireSupabase } from "./supabase";
+import { chartLabel } from "./format";
 import { nextScanFrom, nextSendFrom } from "./schedule";
 import type {
   AdAsset,
@@ -369,11 +370,11 @@ export async function loadWorkspace(profile: BusinessProfile): Promise<Workspace
     return {
       ...mapCompetitorBase(c),
       traffic: orderBySort(related(metricRows).filter((m) => m.kind === "traffic")).map((m) => ({
-        label: str(m.label),
+        label: chartLabel(str(m.label)),
         visits: num(m.value),
       })),
       reviewTrend: orderBySort(related(metricRows).filter((m) => m.kind === "review_trend")).map((m) => ({
-        label: str(m.label),
+        label: chartLabel(str(m.label)),
         visits: num(m.value),
       })),
       trafficSources: orderBySort(related(metricRows).filter((m) => m.kind === "traffic_source")).map((m) => ({
@@ -471,7 +472,7 @@ export async function loadWorkspace(profile: BusinessProfile): Promise<Workspace
     visitsChange: profile.visitsChange,
     conversionRate: profile.conversionRate,
     traffic: orderBySort(myMetricRows.filter((m) => m.kind === "traffic")).map((m) => ({
-      label: str(m.label),
+      label: chartLabel(str(m.label)),
       visits: num(m.value),
     })),
     trafficSources: orderBySort(myMetricRows.filter((m) => m.kind === "channel")).map((m) => ({
@@ -488,7 +489,7 @@ export async function loadWorkspace(profile: BusinessProfile): Promise<Workspace
   for (const row of orderBySort(reviewSeriesRows)) {
     const key = str(row.source);
     reviewSeries[key] = reviewSeries[key] ?? [];
-    reviewSeries[key].push({ label: str(row.label), visits: num(row.score) });
+    reviewSeries[key].push({ label: chartLabel(str(row.label)), visits: num(row.score) });
   }
 
   const reviewSources: ReviewSource[] = reviewSourceRows.map((s) => ({
@@ -624,7 +625,7 @@ export async function loadWorkspace(profile: BusinessProfile): Promise<Workspace
     socialPosts,
     socialMonitorTargets,
     geoVisibility: orderBySort(myMetricRows.filter((m) => m.kind === "geo_visibility")).map((m) => ({
-      label: str(m.label),
+      label: chartLabel(str(m.label)),
       visits: num(m.value),
     })),
     weeklyReports: rows<Row>(reportsRes).map<WeeklyReport>((r) => ({

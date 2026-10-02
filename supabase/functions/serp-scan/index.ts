@@ -74,6 +74,9 @@ import {
  */
 type Device = "desktop" | "mobile";
 
+/** How many days of AI-visibility history the trend keeps (see the write below). */
+const GEO_TREND_WINDOW_DAYS = 90;
+
 interface Body {
   businessId?: string;
   keywords?: string[];
@@ -444,12 +447,13 @@ Deno.serve(async (req) => {
     // draw a spike that never happened.
     if (geoChecked) {
       const day = checkedAt.slice(0, 10);
+      const dayOrder = Math.floor(Date.parse(`${day}T00:00:00Z`) / 86_400_000);
       const { error } = await db.from("my_metrics").insert({
         business_id: businessId,
         kind: "geo_visibility",
         label: day,
         value: geoScore,
-        sort_order: Math.floor(Date.parse(`${day}T00:00:00Z`) / 86_400_000),
+        sort_order: dayOrder,
       });
       if (error) throw new HttpError(500, error.message);
 
@@ -461,6 +465,17 @@ Deno.serve(async (req) => {
         .eq("label", day)
         .lt("created_at", startedAt);
       if (metricPruneError) throw new HttpError(500, metricPruneError.message);
+
+      // The trend accrues a point a day, so it is bounded to the last 90 days:
+      // past that the columns stop being told apart, and the rows would only
+      // grow. The window is what keeps a year of scans a readable chart.
+      const { error: trendWindowError } = await db
+        .from("my_metrics")
+        .delete()
+        .eq("business_id", businessId)
+        .eq("kind", "geo_visibility")
+        .lt("sort_order", dayOrder - GEO_TREND_WINDOW_DAYS);
+      if (trendWindowError) throw new HttpError(500, trendWindowError.message);
     }
 
     /* ------------------------------------------------- search visibility scores */

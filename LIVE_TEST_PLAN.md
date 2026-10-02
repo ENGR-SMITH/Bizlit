@@ -647,12 +647,15 @@ pages always agree about the same site. Costs about **$0.001** for eight domains
       Live result: 8 of 8 domains measured, `10,435,813` visits (+39.5%) for the site itself, three
       months of series and ten channel rows for us, three `traffic` plus ten `traffic_source` rows for
       each of the seven rivals. The response names which domains came back; My Business shows the
-      series and the channel mix, Competition shows the rival's line and sources.
+      series and the channel mix, Competition shows the rival's bars and sources.
 
-- [ ] **A restatement, not a merge.** The provider reports the whole three-month series every run, so
-      run it twice and expect the row **counts to stay identical** — a merge would grow the chart a
-      duplicate point per scan. `sort_order` is months since the epoch, and the channel rows are
-      ordered largest-first because their `sort_order` is the display order.
+- [ ] **A windowed restatement.** The provider reports its recent three months every run, so run it
+      twice and expect the row **counts to stay identical** — the labels this run returned are
+      rewritten rather than duplicated, so a second scan cannot grow the chart a duplicate point.
+      Months it does *not* return are kept until the series passes 12 points, which is what lets the
+      traffic chart add a bar a month instead of staying pinned at three. `sort_order` is months since
+      the epoch, and the channel rows are ordered largest-first because their `sort_order` is the
+      display order.
 - [ ] **The estimate is labelled as one.** My Business says "Estimated visits in the latest month" and
       "Visits are estimates"; nothing claims these figures are counted. SimilarWeb models them.
 - [ ] **A domain with no data is not a zero.** `unavailable` in the response lists it, the tile stays

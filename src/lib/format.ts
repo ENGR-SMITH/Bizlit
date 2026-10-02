@@ -40,6 +40,52 @@ export function dayMonth(iso: string): string {
   });
 }
 
+const MONTH_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function monthShort(month: string): string {
+  return MONTH_SHORT[Number(month) - 1] ?? "";
+}
+
+/**
+ * A metric series label as the axis should read it.
+ *
+ * The scans store machine-shaped labels — `2026-06-01` for a month of SimilarWeb
+ * traffic, `2026-10-02` for one day's AI-visibility reading, `2026-10` for a
+ * competitor's monthly review trend — while the sample workspace stores "Apr".
+ * This reduces the dates to the same short form so a stored chart and a sample
+ * chart read alike, and leaves anything that is not a date (a channel name, a
+ * month already written short) exactly as it is.
+ */
+export function chartLabel(raw: string): string {
+  const monthOnly = /^(\d{4})-(\d{2})$/.exec(raw);
+  if (monthOnly) return monthShort(monthOnly[2]) || raw;
+
+  const dated = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (dated) {
+    const month = monthShort(dated[2]);
+    if (!month) return raw;
+    // A point dated the 1st carries a month of data — that is how the traffic
+    // provider labels its monthly series — so it reads as the month; every other
+    // day is a single reading and reads as one.
+    return dated[3] === "01" ? month : `${Number(dated[3])} ${month}`;
+  }
+
+  return raw;
+}
+
 export function money(value: number): string {
   return value.toLocaleString(undefined, {
     style: "currency",

@@ -374,17 +374,25 @@ secret is set.
   every read that finished, while `last_scan_at` moves only on one that produced something. That
   difference is what lets the Competition page say **"read cleanly, this site publishes no catalogue"**
   instead of showing a 0 that is indistinguishable from a scan that never ran. The page's
-  read states come from those two fields plus the item count and `site_error`.
-- `traffic-scan` and `ads-scan` are the producers behind the traffic panels and the *Active ad
-  campaigns* tile. Both write a **restatement**, not a merge: the metric series
-  (`my_metrics.kind` `traffic` / `channel`, `competitor_metrics.kind` `traffic` /
-  `traffic_source`) has no unique key to upsert against, so the rows of that one kind are
-  replaced wholesale — a merge would leave last month's superseded points behind and the chart
-  would grow a fake history. Only the one `kind` is touched, so the SEO, GEO and review series
-  other scans write are never at risk. `competitor_ads` is restated per competitor for the same
-  reason plus one more: a campaign that has stopped running must stop being counted, which is
-  the whole point of an "active campaigns" figure. An ad's `first_seen_at` is the library's
-  **own** start date, not when we read it, so the history survives the rewrite.
+  read states come from those two fields plus the item count and `site_error`.- `traffic-scan` and `ads-scan` are the producers behind the traffic panels and the *Active ad
+  campaigns* tile. The **time series** they write (`my_metrics.kind` `traffic`,
+  `competitor_metrics.kind` `traffic`) are *windowed restatements*: SimilarWeb only returns its most
+  recent months (three today), so each run rewrites the labels it returned, keeps the months it did
+  not, and holds the series to `SERIES_WINDOW` (12) points. That is what lets a traffic chart add a
+  bar a month instead of being pinned at three however often the scan runs, with neither of the
+  failures a plain merge would bring: a re-read month replaces its stored rows, so it cannot appear
+  twice, and every stored point was read on the day it claims, so nothing is invented. The **mixes**
+  (`channel`, `traffic_source`) are restated wholesale instead — a category the provider no longer
+  reports is no longer true and must not linger — and only the one `kind` is touched, so the SEO,
+  GEO and review series other scans write are never at risk. `competitor_ads` is restated per
+  competitor for the same reason plus one more: a campaign that has stopped running must stop being
+  counted, which is the whole point of an "active campaigns" figure. An ad's `first_seen_at` is the
+  library's **own** start date, not when we read it, so the history survives the rewrite.
+- The other growing series are bounded the same way, so more history never means a less readable
+  chart. The review-score trend writes one point per **day** (`_shared/reviews.ts`
+  `reviewTrendLabel`) inside `REVIEW_TREND_WINDOW` days — a month label gave a fresh workspace a
+  single lonely bar — and the AI-visibility trend keeps the last `GEO_TREND_WINDOW_DAYS` days while
+  a competitor's review trend keeps `REVIEW_TREND_WINDOW_MONTHS` months.
 - The pull runs six workspace-wide scans (search, social, the competitor benchmark, website
   traffic, competitor advertising — plus the per-source catalogue reads), and they all start at
   once. That is why `SITE_SCAN_CONCURRENCY` is **2**: each catalogue read and both the social

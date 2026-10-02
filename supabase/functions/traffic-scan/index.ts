@@ -14,6 +14,7 @@ import {
   trafficDomain,
   trafficMaxChargeUsd,
   trafficMaxDomains,
+  writeSeries,
   type DomainTraffic,
 } from "../_shared/traffic.ts";
 
@@ -218,7 +219,10 @@ Deno.serve(async (req) => {
         .eq("id", businessId);
       if (error) throw new HttpError(500, error.message);
 
-      await replaceSeries("my_metrics", businessId, null, "traffic", monthRows(ours));
+      // The monthly series accumulates: restated months are rewritten and the
+      // months the provider no longer reports are kept, so the chart grows a bar
+      // a month instead of resetting to whatever this run returned.
+      await writeSeries(db, "my_metrics", businessId, null, "traffic", monthRows(ours));
       await replaceSeries("my_metrics", businessId, null, "channel", channelRows(ours));
       written += 1;
     }
@@ -236,7 +240,7 @@ Deno.serve(async (req) => {
         .eq("business_id", businessId);
       if (error) throw new HttpError(500, error.message);
 
-      await replaceSeries("competitor_metrics", businessId, target.competitorId, "traffic", monthRows(traffic));
+      await writeSeries(db, "competitor_metrics", businessId, target.competitorId, "traffic", monthRows(traffic));
       await replaceSeries(
         "competitor_metrics",
         businessId,
@@ -316,13 +320,15 @@ Deno.serve(async (req) => {
 
   /**
    * Replaces one metric kind's rows for a business (and, for a rival, for that
-   * competitor).
+   * competitor). Used for the **mixes** — channels, traffic sources — where the
+   * provider restates the whole set of categories every run: a category that has
+   * disappeared is no longer true and must not linger.
    *
-   * The provider restates the whole series every run, so a merge would leave last
-   * month's superseded rows behind and the chart would grow a fake history. A
-   * plain delete-then-insert is used because these tables have no unique key to
+   * A plain delete-then-insert is used because these tables have no unique key to
    * upsert against. Only the one `kind` is touched, so the SEO, GEO and review
-   * series that other scans write are never at risk.
+   * series that other scans write are never at risk. **Time series** are not
+   * written this way — see `writeSeries`, which keeps the months this run's
+   * payload does not mention.
    */
   async function replaceSeries(
     table: "my_metrics" | "competitor_metrics",

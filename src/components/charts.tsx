@@ -33,6 +33,30 @@ function useSvgId(prefix: string) {
 }
 
 /**
+ * Which bars get an axis label when the series is longer than the row can hold.
+ *
+ * The stored series grow now — a year of traffic months, two months of daily
+ * readings — and a label under every bar would be a grey smear at this size.
+ * The indices are spread evenly across the whole run and always include both
+ * ends, so the axis still reads first-to-last without crowding the middle.
+ */
+export function axisLabelIndices(length: number, max = 7): number[] {
+  if (length <= 0) return [];
+  if (length <= max) return Array.from({ length }, (_, i) => i);
+
+  const picked: number[] = [];
+  const seen = new Set<number>();
+  for (let k = 0; k < max; k += 1) {
+    const index = Math.round((k * (length - 1)) / (max - 1));
+    if (!seen.has(index)) {
+      seen.add(index);
+      picked.push(index);
+    }
+  }
+  return picked;
+}
+
+/**
  * One bar with rounded top corners — SVG's `rx` would round the baseline end
  * too, so the corners are drawn explicitly. Zero-height bars draw nothing.
  */
@@ -87,6 +111,8 @@ export function BarChart({
   const max = Math.max(...data.map((d) => d.visits), 0) * 1.08 || 1;
   const slot = w / data.length;
   const barW = Math.min(slot * 0.6, 46);
+  // Long series label a few points, not every one — see `axisLabelIndices`.
+  const labelled = new Set(axisLabelIndices(data.length));
 
   const bars = data.map((d, i) => {
     const barH = Math.max((d.visits / max) * h, 0);
@@ -154,7 +180,8 @@ export function BarChart({
               fill={`url(#${gradientId})`}
               opacity={hover === null || hover === i ? 1 : 0.45}
               style={{
-                animationDelay: `${i * 60}ms`,
+                // A long series would otherwise finish its rise seconds later.
+                animationDelay: `${Math.min(i * 60, 720)}ms`,
                 filter:
                   hover === i
                     ? `drop-shadow(0 3px 8px color-mix(in srgb, ${color} 45%, transparent))`
@@ -206,18 +233,20 @@ export function BarChart({
 
       {/* Labels line up under their own bars; the ends sit flush. */}
       <div className="relative mt-1 h-4">
-        {data.map((d, i) => (
-          <span
-            key={`${d.label}-${i}`}
-            className="absolute top-0 text-[10px] whitespace-nowrap text-slate-400"
-            style={{
-              left: `${((slot * (i + 0.5)) * 100) / w}%`,
-              transform: "translateX(-50%)",
-            }}
-          >
-            {d.label}
-          </span>
-        ))}
+        {data.map((d, i) =>
+          labelled.has(i) ? (
+            <span
+              key={`${d.label}-${i}`}
+              className="absolute top-0 text-[10px] whitespace-nowrap text-slate-400"
+              style={{
+                left: `${((slot * (i + 0.5)) * 100) / w}%`,
+                transform: "translateX(-50%)",
+              }}
+            >
+              {d.label}
+            </span>
+          ) : null,
+        )}
       </div>
     </div>
   );

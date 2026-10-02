@@ -14,10 +14,30 @@ import {
   readerFor,
   reviewInputFor,
   reviewRunFinished,
+  reviewTrendLabel,
+  REVIEW_TREND_WINDOW,
   sentimentForRating,
   startReviewScrape,
   suggestedAction,
 } from "../supabase/functions/_shared/reviews";
+
+describe("the trend point a sync writes", () => {
+  it("labels a point with the day, so every refresh adds a bar", () => {
+    // A month label meant a workspace's first weeks of scanning produced a
+    // single lonely column; a day label means the chart accrues a reading each
+    // time it is run, and a same-day re-run updates that reading rather than
+    // stacking a second one.
+    expect(reviewTrendLabel(new Date("2026-10-02T13:45:00Z"))).toBe("2026-10-02");
+    expect(reviewTrendLabel(new Date("2026-10-02T23:59:59Z"))).toBe("2026-10-02");
+  });
+
+  it("keeps a window of days rather than growing forever", () => {
+    // Two months of daily bars is a trend a chart can draw; a year of them is a
+    // smear, so the oldest days age out at the window.
+    expect(REVIEW_TREND_WINDOW).toBeGreaterThanOrEqual(30);
+    expect(REVIEW_TREND_WINDOW).toBeLessThan(365);
+  });
+});
 
 describe("review actor payloads", () => {
   it("sends Yelp and G2 the input their actors accept", () => {

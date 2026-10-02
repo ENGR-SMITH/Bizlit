@@ -35,6 +35,9 @@ import {
  */
 const TOP_N = 10;
 
+/** How many months of review-trend history each competitor keeps. */
+const REVIEW_TREND_WINDOW_MONTHS = 18;
+
 interface Body {
   businessId?: string;
   keywords?: string[];
@@ -437,6 +440,16 @@ Deno.serve(async (req) => {
         .eq("label", trendLabel)
         .lt("created_at", startedAt);
       if (metricPruneError) throw new HttpError(500, metricPruneError.message);
+
+      // The trend accrues a point a month and would otherwise grow forever;
+      // 18 months is a window the chart can still draw and a person still read.
+      const { error: trendWindowError } = await db
+        .from("competitor_metrics")
+        .delete()
+        .eq("business_id", businessId)
+        .eq("kind", "review_trend")
+        .lt("sort_order", trendSort - REVIEW_TREND_WINDOW_MONTHS);
+      if (trendWindowError) throw new HttpError(500, trendWindowError.message);
     }
 
     await db.from("scan_runs").insert({

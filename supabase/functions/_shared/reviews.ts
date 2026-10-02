@@ -66,6 +66,26 @@ export const REVIEW_PLATFORMS = Object.keys(PLATFORM_LABELS) as ReviewPlatform[]
 export const DEFAULT_MAX_REVIEWS = 20;
 const MAX_REVIEWS_PER_CALL = 20;
 
+/**
+ * The label a sync writes for its trend point: one point per **day**, so the
+ * review-score chart on Social accrues a bar every time the workspace is
+ * refreshed instead of one bar a month (which is what a month-short label gave a
+ * workspace its first weeks: a single, lonely column).
+ *
+ * A same-day re-sync updates today's point rather than adding a duplicate, so the
+ * series stays a measurement per day however often the sync runs.
+ */
+export function reviewTrendLabel(now = new Date()): string {
+  return now.toISOString().slice(0, 10);
+}
+
+/**
+ * How many days of trend are kept per source. Two months of daily bars is a real
+ * trend the chart can draw; past that the columns stop being told apart, so the
+ * oldest days age out instead of being kept forever.
+ */
+export const REVIEW_TREND_WINDOW = 60;
+
 /** What one page of the Google Maps reviews engine returns. */
 const GOOGLE_REVIEWS_PER_PAGE = 8;
 /**
