@@ -244,6 +244,21 @@ describe("writeSeries", () => {
     expect(august?.value).toBe(999);
     expect(store.my_metrics.filter((row) => row.label === "2026-08-01")).toHaveLength(1);
     expect(store.my_metrics.every((row) => row.kind === "traffic")).toBe(true);
+
+    // As the provider's own window rolls on, the series keeps growing: this is
+    // the mechanism that takes a chart off the three bars it used to be pinned at.
+    await writeSeries(db, "my_metrics", "biz-1", null, "traffic", [
+      { label: "2026-10-01", value: 1_100, sortOrder: 2026 * 12 + 10 },
+      { label: "2026-11-01", value: 1_200, sortOrder: 2026 * 12 + 11 },
+    ]);
+    expect(store.my_metrics.map((row) => row.label)).toEqual([
+      "2026-06-01",
+      "2026-07-01",
+      "2026-08-01",
+      "2026-09-01",
+      "2026-10-01",
+      "2026-11-01",
+    ]);
   });
 
   it("touches only the kind it was asked to write", async () => {

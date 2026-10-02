@@ -517,6 +517,17 @@ export function BusinessPage() {
                     No traffic series yet — run a refresh to read your visits.
                   </p>
                 )}
+                {/* Why this can sit at a handful of bars: the provider publishes
+                    only its most recent months, and every month we have read is
+                    kept rather than replaced — so the chart grows as the months
+                    roll, not with each refresh of the same month. */}
+                {myBusiness.traffic.length > 0 && myBusiness.traffic.length < 12 ? (
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    Keeps every month we have read (up to 12). SimilarWeb publishes only
+                    its latest 3 months, so a new bar arrives as the months roll — a
+                    refresh in the same month re-reads that same window.
+                  </p>
+                ) : null}
                 {/* Conversion is deliberately absent until something measures it:
                     no provider we hold reports it, and a stored 0 would read as
                     "nobody converts" rather than "nobody has looked". */}

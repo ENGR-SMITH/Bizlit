@@ -714,7 +714,17 @@ export function CompetitionPage() {
               }
             />
             <div className="grid gap-5 px-4 py-4 md:grid-cols-2">
-              <BarChart data={competitor.traffic} color="#4f46e5" />
+              <div>
+                <BarChart data={competitor.traffic} color="#4f46e5" />
+                {/* Same ceiling as our own series: the provider publishes its
+                    recent months only, and the ones we have read are kept. */}
+                {competitor.traffic.length > 0 && competitor.traffic.length < 12 ? (
+                  <p className="mt-2 text-[11px] text-slate-400">
+                    Every month read is kept (up to 12); SimilarWeb publishes only its
+                    latest 3, so this grows as the months roll.
+                  </p>
+                ) : null}
+              </div>
               <div>
                 <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
                   Traffic sources
