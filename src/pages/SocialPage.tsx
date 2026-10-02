@@ -32,7 +32,7 @@ import { Modal } from "../components/Modal";
 import { BarChart, DeltaPill, Stars } from "../components/charts";
 import { useToast } from "../components/Toast";
 import { platformLabel, summariseChannelSocial, summariseSocial } from "../lib/social";
-import { compact, relativeTime, shortDate } from "../lib/format";
+import { compact, relativeTime, reviewPlatformLabel, shortDate } from "../lib/format";
 import { useWorkspace, useWorkspaceData } from "../lib/workspace";
 import type { MyReview } from "../lib/types";
 
@@ -410,44 +410,62 @@ export function SocialPage() {
               />
             ) : (
               <ul className="divide-y divide-slate-100">
-                {latestReviewScan.items.map((r) => (
-                  <li key={r.id} className="px-4 py-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-800">{r.author}</span>
-                      <Stars rating={r.rating} />
-                    </div>
-                    <p className="mt-1 text-[11px] text-slate-600">{r.text}</p>
-                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-400">
-                      <span>
-                        {r.source} · {relativeTime(r.postedAt)}
-                      </span>
-                      {r.language && r.language !== "en" ? (
-                        <Badge tone="neutral">{r.language.toUpperCase()}</Badge>
-                      ) : null}
-                      {r.replied ? (
-                        <Badge tone="good">Replied</Badge>
-                      ) : r.sentiment === "negative" ? (
-                        <Badge tone="bad">Needs reply</Badge>
-                      ) : null}
-                    </p>
-                    {r.replied ? (
-                      <p className="mt-1.5 rounded bg-emerald-50 px-2 py-1 text-[11px] text-emerald-800">
-                        {r.replyText || "Reply sent."}
-                      </p>
-                    ) : (
-                      <p className="mt-1.5 rounded bg-indigo-50 px-2 py-1 text-[11px] text-indigo-700">
-                        {r.action}
-                      </p>
-                    )}
-                    {r.replied ? null : (
-                      <div className="mt-2 flex justify-end">
-                        <button type="button" className={btnGhost} onClick={() => openReply(r)}>
-                          <Send size={12} /> Reply
-                        </button>
+                {latestReviewScan.items.map((r) => {
+                  /*
+                   * The tag names the exact platform this one review came from,
+                   * so a mixed list reads Google / Trustpilot / Yelp at a glance
+                   * instead of hiding the platform in the meta line. The stored
+                   * key is preferred because it is the platform itself; `source`
+                   * is the label the sync wrote beside it, and covers a row
+                   * saved before `platform` existed.
+                   */
+                  const platformTag = reviewPlatformLabel(r.platform) || r.source;
+                  return (
+                    <li key={r.id} className="px-4 py-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="truncate text-xs font-semibold text-slate-800">
+                            {r.author}
+                          </span>
+                          {platformTag ? (
+                            <Badge tone="info" className="shrink-0">
+                              {platformTag}
+                            </Badge>
+                          ) : null}
+                        </span>
+                        <Stars rating={r.rating} />
                       </div>
-                    )}
-                  </li>
-                ))}
+                      <p className="mt-1 text-[11px] text-slate-600">{r.text}</p>
+                      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-400">
+                        <span>{relativeTime(r.postedAt)}</span>
+                        {r.language && r.language !== "en" ? (
+                          <Badge tone="neutral">{r.language.toUpperCase()}</Badge>
+                        ) : null}
+                        {r.replied ? (
+                          <Badge tone="good">Replied</Badge>
+                        ) : r.sentiment === "negative" ? (
+                          <Badge tone="bad">Needs reply</Badge>
+                        ) : null}
+                      </p>
+                      {r.replied ? (
+                        <p className="mt-1.5 rounded bg-emerald-50 px-2 py-1 text-[11px] text-emerald-800">
+                          {r.replyText || "Reply sent."}
+                        </p>
+                      ) : (
+                        <p className="mt-1.5 rounded bg-indigo-50 px-2 py-1 text-[11px] text-indigo-700">
+                          {r.action}
+                        </p>
+                      )}
+                      {r.replied ? null : (
+                        <div className="mt-2 flex justify-end">
+                          <button type="button" className={btnGhost} onClick={() => openReply(r)}>
+                            <Send size={12} /> Reply
+                          </button>
+                        </div>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
             )}
 

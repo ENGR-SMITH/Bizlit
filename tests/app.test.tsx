@@ -347,6 +347,34 @@ describe("BIZLIT app", () => {
     expect(text()).toContain("Social media score & where to focus");
   });
 
+  it("tags every review with the platform that exact review came from", async () => {
+    await render();
+    click(findByText("button", "Social & reviews"));
+
+    // The sample scan mixes platforms, so each row names its own rather than
+    // leaving the reader to work it out from the review text.
+    const expected: Record<string, string> = {
+      "Grace W.": "Google Reviews",
+      "Peter M.": "Trustpilot",
+      "Nadia H.": "Facebook",
+      "Samuel K.": "Instagram",
+    };
+
+    for (const [author, platform] of Object.entries(expected)) {
+      const row = Array.from(container.querySelectorAll("li")).find((li) =>
+        (li.textContent ?? "").includes(author),
+      );
+      expect(row, `no review row for ${author}`).toBeTruthy();
+
+      // A tag of its own — an element whose whole text is the platform — not
+      // the platform mentioned somewhere in the row's prose.
+      const tag = Array.from(row?.querySelectorAll("span") ?? []).find(
+        (span) => (span.textContent ?? "").trim() === platform,
+      );
+      expect(tag, `${author}'s review is not tagged "${platform}"`).toBeTruthy();
+    }
+  });
+
   it("lists the catalogue on the inventory page", async () => {
     await render();
     click(findByText("button", "Inventory & services"));

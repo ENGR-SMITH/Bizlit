@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAlerts } from "../src/lib/alerts";
 import { sampleWorkspace } from "../src/data/sample";
+import { reviewPlatformLabel } from "../src/lib/format";
 import {
   collectReviewScrape,
   mapApifyReview,
@@ -15,6 +16,7 @@ import {
   reviewInputFor,
   reviewRunFinished,
   reviewTrendLabel,
+  REVIEW_PLATFORMS,
   REVIEW_TREND_WINDOW,
   sentimentForRating,
   startReviewScrape,
@@ -176,6 +178,26 @@ describe("review helpers", () => {
     expect(platformLabelOf("google")).toBe("Google Reviews");
     expect(platformLabelOf("tripadvisor")).toBe("TripAdvisor");
     expect(platformLabelOf("glassdoor")).toBe("glassdoor");
+  });
+});
+
+describe("the platform tag a review is shown with", () => {
+  it("reads exactly as the reader labels the same platform", () => {
+    // The browser cannot import the Deno-side reader, so its display names are
+    // copied into `src/lib/format.ts` for the tag on each review. Without this
+    // the two silently drift and a tag starts disagreeing with the sync that
+    // wrote the row it sits next to.
+    for (const platform of REVIEW_PLATFORMS) {
+      expect(reviewPlatformLabel(platform)).toBe(platformLabelOf(platform));
+    }
+  });
+
+  it("falls back to the row's own source rather than a blank tag", () => {
+    // A row saved before `my_reviews.platform` existed has no key to label, and
+    // an unknown key must show its real name instead of an invented one.
+    expect(reviewPlatformLabel("")).toBe("");
+    expect(reviewPlatformLabel("glassdoor")).toBe("glassdoor");
+    expect(reviewPlatformLabel("  G2 ")).toBe("G2");
   });
 });
 

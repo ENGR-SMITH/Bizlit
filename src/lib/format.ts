@@ -215,3 +215,31 @@ export function itemKindLabel(kind: string | undefined): string {
       return "Product";
   }
 }
+
+/** Display names for the review-platform keys `my_reviews.platform` stores. */
+const REVIEW_PLATFORM_LABELS: Record<string, string> = {
+  google: "Google Reviews",
+  yelp: "Yelp",
+  g2: "G2",
+  trustpilot: "Trustpilot",
+  capterra: "Capterra",
+  tripadvisor: "TripAdvisor",
+  facebook: "Facebook",
+  instagram: "Instagram",
+};
+
+/**
+ * The platform a review was read from, as the tag on that review reads it.
+ *
+ * This mirrors the reader's own display names in `supabase/functions/_shared/
+ * reviews.ts`, which the browser cannot import because that module is Deno-side
+ * — so the two copies are pinned together by a test rather than left to drift.
+ * An empty key returns an empty label (the caller falls back to the row's
+ * `source`); an unknown key passes through unchanged, so a platform added to the
+ * reader tomorrow shows its real name instead of a blank or invented tag.
+ */
+export function reviewPlatformLabel(platform: string): string {
+  const key = platform.trim().toLowerCase();
+  if (!key) return "";
+  return REVIEW_PLATFORM_LABELS[key] ?? platform.trim();
+}
