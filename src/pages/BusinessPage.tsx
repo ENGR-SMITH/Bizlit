@@ -30,7 +30,7 @@ import {
   btnPrimary,
   inputClass,
 } from "../components/primitives";
-import { AreaChart, BarList, DeltaPill } from "../components/charts";
+import { BarChart, BarList, DeltaPill } from "../components/charts";
 import { MetricTile, ScoreRadialCard, TrafficTrendCard } from "../components/insights";
 import { Modal } from "../components/Modal";
 import { useActionToast, useToast } from "../components/Toast";
@@ -493,7 +493,7 @@ export function BusinessPage() {
               <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
                 AI answer visibility trend
               </p>
-              <AreaChart
+              <BarChart
                 data={geoVisibility}
                 color="#0d9488"
                 valueFormat={(n) => `${n}/100`}
@@ -511,7 +511,7 @@ export function BusinessPage() {
             <div className="grid gap-5 px-4 py-4 md:grid-cols-2">
               <div>
                 {myBusiness.traffic.length ? (
-                  <AreaChart data={myBusiness.traffic} color="#4f46e5" />
+                  <BarChart data={myBusiness.traffic} color="#4f46e5" />
                 ) : (
                   <p className="py-6 text-center text-[11px] text-slate-500">
                     No traffic series yet — run a refresh to read your visits.

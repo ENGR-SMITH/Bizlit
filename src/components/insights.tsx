@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { useId } from "react";
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
   PolarAngleAxis,
   RadialBar,
   RadialBarChart,
@@ -228,8 +228,8 @@ export function MetricTile({
 }
 
 /**
- * Traffic trend card — headline number, movement, then the series drawn as a
- * gradient-filled area (the same treatment as the reference design).
+ * Traffic trend card — headline number, movement, then the series drawn as
+ * gradient-filled bars rising from the baseline.
  */
 export function TrafficTrendCard({
   label = "Website traffic",
@@ -299,35 +299,26 @@ export function TrafficTrendCard({
 
         <div className="h-24">
           <ChartContainer className="h-full w-full" config={config}>
-            <AreaChart data={points} margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
+            <BarChart data={points} margin={{ top: 0, right: 0, bottom: 0, left: 0 }} barCategoryGap="28%">
               <defs>
-                <linearGradient id={gradientId} x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor={stroke} stopOpacity={0.45} />
-                  <stop offset="60%" stopColor={stroke} stopOpacity={0.12} />
-                  <stop offset="100%" stopColor={stroke} stopOpacity={0} />
+                <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={`color-mix(in srgb, ${stroke} 62%, white)`} />
+                  <stop offset="100%" stopColor={stroke} />
                 </linearGradient>
               </defs>
               <XAxis dataKey="label" hide />
               <Tooltip
-                cursor={{ stroke, strokeWidth: 1, strokeDasharray: "4 4" }}
+                cursor={{ fill: stroke, fillOpacity: 0.07 }}
                 content={<ChartTooltipContent />}
               />
-              <Area
+              <Bar
                 dataKey="visits"
                 animationDuration={900}
                 fill={`url(#${gradientId})`}
-                fillOpacity={1}
-                stroke={stroke}
-                strokeWidth={2}
-                type="monotone"
-                activeDot={{
-                  r: 4.5,
-                  strokeWidth: 2,
-                  stroke: "#ffffff",
-                  fill: stroke,
-                }}
+                maxBarSize={28}
+                radius={[5, 5, 0, 0]}
               />
-            </AreaChart>
+            </BarChart>
           </ChartContainer>
         </div>
 

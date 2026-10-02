@@ -76,6 +76,15 @@ html {
   }
 }
 
+@keyframes chart-rise {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
 @layer utilities {
   /* Gentle entrance for landing-page blocks. */
   .mw-rise {
@@ -109,6 +118,11 @@ html {
   .chart-ring {
     animation: chart-ring 1.1s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
+  .chart-rise {
+    animation: chart-rise 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-box: fill-box;
+    transform-origin: bottom;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -118,7 +132,8 @@ html {
   .chart-fade,
   .chart-grow,
   .chart-pop,
-  .chart-ring {
+  .chart-ring,
+  .chart-rise {
     animation: none;
   }
 }

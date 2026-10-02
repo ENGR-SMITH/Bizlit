@@ -29,7 +29,7 @@ import {
   inputClass,
 } from "../components/primitives";
 import { Modal } from "../components/Modal";
-import { AreaChart, DeltaPill, Stars } from "../components/charts";
+import { BarChart, DeltaPill, Stars } from "../components/charts";
 import { useToast } from "../components/Toast";
 import { platformLabel, summariseChannelSocial, summariseSocial } from "../lib/social";
 import { compact, relativeTime, shortDate } from "../lib/format";
@@ -363,7 +363,7 @@ export function SocialPage() {
                       </p>
                     </div>
                     <div className="md:col-span-2">
-                      <AreaChart
+                      <BarChart
                         data={s.series}
                         color={s.score < s.previousScore ? "#e11d48" : "#059669"}
                         valueFormat={(n) => n.toFixed(2)}

@@ -33,12 +33,36 @@ function useSvgId(prefix: string) {
 }
 
 /**
- * The workspace trend chart: a smooth gradient-filled area with a soft glow on
- * the line, hairline gridlines, and a hover state that shows a crosshair, a
- * highlighted point and a clamped tooltip with the period and its value. The
- * line draws itself in on mount and the endpoint pops once it lands.
+ * One bar with rounded top corners — SVG's `rx` would round the baseline end
+ * too, so the corners are drawn explicitly. Zero-height bars draw nothing.
  */
-export function AreaChart({
+function barPath(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number,
+): string {
+  if (height <= 0 || width <= 0) return "";
+  const r = Math.min(radius, height, width / 2);
+  return [
+    `M ${x},${y + height}`,
+    `L ${x},${y + r}`,
+    `Q ${x},${y} ${x + r},${y}`,
+    `L ${x + width - r},${y}`,
+    `Q ${x + width},${y} ${x + width},${y + r}`,
+    `L ${x + width},${y + height}`,
+    "Z",
+  ].join(" ");
+}
+
+/**
+ * The workspace trend chart: gradient-filled bars rising from a grounded zero
+ * baseline, hairline gridlines and a grounding rule, and a hover state that
+ * lifts one bar, dims the rest and shows a clamped tooltip with the period and
+ * its value. The bars rise in sequence from the baseline on mount.
+ */
+export function BarChart({
   data,
   color = "#4f46e5",
   valueFormat = compact,
@@ -49,7 +73,7 @@ export function AreaChart({
   valueFormat?: (n: number) => string;
   height?: number;
 }) {
-  const gradientId = useSvgId("area-fill");
+  const gradientId = useSvgId("bar-fill");
   const [hover, setHover] = useState<number | null>(null);
 
   const w = 320;
@@ -58,33 +82,23 @@ export function AreaChart({
 
   if (!data.length) return null;
 
-  const values = data.map((d) => d.visits);
-  const max = Math.max(...values) * 1.12;
-  const min = Math.min(...values) * 0.88;
-  const span = max - min || 1;
-  const step = data.length > 1 ? w / (data.length - 1) : w;
+  // Bars are lengths, so they are grounded at zero — the height of a bar is
+  // the value itself — with a little headroom above the tallest for its cap.
+  const max = Math.max(...data.map((d) => d.visits), 0) * 1.08 || 1;
+  const slot = w / data.length;
+  const barW = Math.min(slot * 0.6, 46);
 
-  // A single sample still deserves a full-width line, so mirror it to the edge.
-  const points =
-    data.length === 1
-      ? [
-          { x: 0, y: h - ((data[0].visits - min) / span) * h, ...data[0] },
-          { x: w, y: h - ((data[0].visits - min) / span) * h, ...data[0] },
-        ]
-      : data.map((d, i) => ({
-          x: i * step,
-          y: h - ((d.visits - min) / span) * h,
-          ...d,
-        }));
+  const bars = data.map((d, i) => {
+    const barH = Math.max((d.visits / max) * h, 0);
+    const cx = slot * (i + 0.5);
+    return { ...d, cx, barH, x: cx - barW / 2, y: h - barH };
+  });
 
-  const linePath = smoothPath(points);
-  const areaPath = `${linePath} L ${w},${h} L 0,${h} Z`;
-  const last = points[points.length - 1];
-  const active = hover === null ? null : points[hover];
+  const active = hover === null ? null : bars[hover];
 
   // Keep the tooltip inside the card: pull it back toward the middle near the
-  // edges, and flip it below the point when there is no room above.
-  const activePct = active ? (active.x / w) * 100 : 0;
+  // edges, and flip it below the bar top when there is no room above.
+  const activePct = active ? (active.cx / w) * 100 : 0;
   const tooltipLeft = Math.min(88, Math.max(12, activePct));
   const flipBelow = active ? active.y < 36 : false;
 
@@ -100,9 +114,8 @@ export function AreaChart({
         >
           <defs>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={color} stopOpacity={0.42} />
-              <stop offset="55%" stopColor={color} stopOpacity={0.14} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
+              <stop offset="0%" stopColor={`color-mix(in srgb, ${color} 62%, white)`} />
+              <stop offset="100%" stopColor={color} />
             </linearGradient>
           </defs>
 
@@ -121,86 +134,42 @@ export function AreaChart({
             />
           ))}
 
-          {/* Crosshair under the hovered point. */}
-          {active ? (
-            <line
-              x1={active.x}
-              x2={active.x}
-              y1="0"
-              y2={h}
-              stroke={color}
-              strokeOpacity={0.4}
-              strokeWidth="1"
-              strokeDasharray="3 3"
-              vectorEffect="non-scaling-stroke"
+          {/* The baseline every bar stands on. */}
+          <line
+            x1="0"
+            x2={w}
+            y1={h}
+            y2={h}
+            stroke="#e2e8f0"
+            strokeWidth="1"
+            vectorEffect="non-scaling-stroke"
+          />
+
+          {/* The bars: rounded caps, gradient bodies, staggered rise. */}
+          {bars.map((b, i) => (
+            <path
+              key={`${b.label}-${i}`}
+              className="chart-rise transition-opacity duration-150"
+              d={barPath(b.x, b.y, barW, b.barH, 6)}
+              fill={`url(#${gradientId})`}
+              opacity={hover === null || hover === i ? 1 : 0.45}
+              style={{
+                animationDelay: `${i * 60}ms`,
+                filter:
+                  hover === i
+                    ? `drop-shadow(0 3px 8px color-mix(in srgb, ${color} 45%, transparent))`
+                    : undefined,
+              }}
             />
-          ) : null}
+          ))}
 
-          <path className="chart-fade" d={areaPath} fill={`url(#${gradientId})`} />
-          <path
-            className="chart-draw"
-            d={linePath}
-            fill="none"
-            pathLength={100}
-            strokeDasharray={100}
-            stroke={color}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-            style={{
-              filter: `drop-shadow(0 2px 6px color-mix(in srgb, ${color} 38%, transparent))`,
-            }}
-          />
-
-          {/* The landing point: halo, white-ringed dot. */}
-          <circle
-            className="chart-pop"
-            cx={last.x}
-            cy={last.y}
-            r={7}
-            fill={color}
-            fillOpacity={0.18}
-          />
-          <circle
-            className="chart-pop"
-            cx={last.x}
-            cy={last.y}
-            r={3.5}
-            fill="white"
-            stroke={color}
-            strokeWidth={2.5}
-            vectorEffect="non-scaling-stroke"
-          />
-
-          {/* Hovered point sits above the resting one. */}
-          {active && hover !== points.length - 1 ? (
-            <>
-              <circle
-                cx={active.x}
-                cy={active.y}
-                r={8}
-                fill={color}
-                fillOpacity={0.18}
-              />
-              <circle
-                cx={active.x}
-                cy={active.y}
-                r={4}
-                fill="white"
-                stroke={color}
-                strokeWidth={2.5}
-                vectorEffect="non-scaling-stroke"
-              />
-            </>
-          ) : null}
-
-          {points.map((p, i) => (
+          {/* One hover zone per bar, the full height of the slot. */}
+          {bars.map((b, i) => (
             <rect
-              key={`${p.label}-${i}`}
-              x={p.x - step / 2}
+              key={`zone-${b.label}-${i}`}
+              x={slot * i}
               y={0}
-              width={step}
+              width={slot}
               height={h}
               fill="transparent"
               onMouseEnter={() => setHover(i)}
@@ -235,20 +204,15 @@ export function AreaChart({
         ) : null}
       </div>
 
-      {/* Labels line up under their own points; the ends sit flush. */}
+      {/* Labels line up under their own bars; the ends sit flush. */}
       <div className="relative mt-1 h-4">
         {data.map((d, i) => (
           <span
-            key={d.label}
+            key={`${d.label}-${i}`}
             className="absolute top-0 text-[10px] whitespace-nowrap text-slate-400"
             style={{
-              left: `${(i * step * 100) / w}%`,
-              transform:
-                i === 0
-                  ? "none"
-                  : i === data.length - 1
-                    ? "translateX(-100%)"
-                    : "translateX(-50%)",
+              left: `${((slot * (i + 0.5)) * 100) / w}%`,
+              transform: "translateX(-50%)",
             }}
           >
             {d.label}

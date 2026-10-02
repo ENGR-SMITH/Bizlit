@@ -41,7 +41,7 @@ import {
 } from "../components/primitives";
 import { Modal } from "../components/Modal";
 import { SocialSuggestions, useSuggestionChoices } from "../components/SocialSuggestions";
-import { AreaChart, BarList, Stars } from "../components/charts";
+import { BarChart, BarList, Stars } from "../components/charts";
 import { StatusStatGrid, type StatStatus } from "../components/insights";
 import { useActionToast, useToast } from "../components/Toast";
 import {
@@ -714,7 +714,7 @@ export function CompetitionPage() {
               }
             />
             <div className="grid gap-5 px-4 py-4 md:grid-cols-2">
-              <AreaChart data={competitor.traffic} color="#4f46e5" />
+              <BarChart data={competitor.traffic} color="#4f46e5" />
               <div>
                 <p className="mb-2 text-xs font-semibold tracking-wide text-slate-500 uppercase">
                   Traffic sources
