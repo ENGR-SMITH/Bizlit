@@ -351,27 +351,35 @@ describe("BIZLIT app", () => {
     await render();
     click(findByText("button", "Social & reviews"));
 
-    // The sample scan mixes platforms, so each row names its own rather than
-    // leaving the reader to work it out from the review text.
-    const expected: Record<string, string> = {
-      "Grace W.": "Google Reviews",
-      "Peter M.": "Trustpilot",
-      "Nadia H.": "Facebook",
-      "Samuel K.": "Instagram",
+    // The sample scan mixes platforms, so each row carries its platform in that
+    // platform's own colour with its logo — the colour is pinned here so a tag
+    // cannot quietly fall back to the grey pill everyone shares.
+    const expected: Record<string, { label: string; brand: string }> = {
+      "Grace W.": { label: "Google Reviews", brand: "#E8F0FE" },
+      "Peter M.": { label: "Trustpilot", brand: "#E6F7F1" },
+      "Nadia H.": { label: "Facebook", brand: "#DCE9FE" },
+      "Samuel K.": { label: "Instagram", brand: "#FCE9F1" },
     };
 
-    for (const [author, platform] of Object.entries(expected)) {
+    for (const [author, want] of Object.entries(expected)) {
       const row = Array.from(container.querySelectorAll("li")).find((li) =>
         (li.textContent ?? "").includes(author),
       );
       expect(row, `no review row for ${author}`).toBeTruthy();
 
-      // A tag of its own — an element whose whole text is the platform — not
-      // the platform mentioned somewhere in the row's prose.
+      // The tag is the pill in the row — the only rounded-full span carrying
+      // the platform's name — not the platform mentioned somewhere in prose.
       const tag = Array.from(row?.querySelectorAll("span") ?? []).find(
-        (span) => (span.textContent ?? "").trim() === platform,
+        (span) =>
+          String(span.className).includes("rounded-full") &&
+          (span.textContent ?? "").includes(want.label),
       );
-      expect(tag, `${author}'s review is not tagged "${platform}"`).toBeTruthy();
+      expect(tag, `${author}'s review is not tagged "${want.label}"`).toBeTruthy();
+      expect(String(tag?.className), `${author}'s tag lost its brand colour`).toContain(
+        want.brand,
+      );
+      // …and it carries the platform's logo, not just the colour.
+      expect(tag?.querySelector("svg"), `${author}'s tag has no logo`).toBeTruthy();
     }
   });
 

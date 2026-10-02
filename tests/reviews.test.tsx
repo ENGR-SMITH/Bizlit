@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAlerts } from "../src/lib/alerts";
 import { sampleWorkspace } from "../src/data/sample";
 import { reviewPlatformLabel } from "../src/lib/format";
+import { REVIEW_PLATFORM_BRANDS } from "../src/components/PlatformTag";
 import {
   collectReviewScrape,
   mapApifyReview,
@@ -198,6 +199,19 @@ describe("the platform tag a review is shown with", () => {
     expect(reviewPlatformLabel("")).toBe("");
     expect(reviewPlatformLabel("glassdoor")).toBe("glassdoor");
     expect(reviewPlatformLabel("  G2 ")).toBe("G2");
+  });
+
+  it("dresses every platform the reader can connect in its own colour", () => {
+    // Each tag is told apart by the platform's brand colour and logo, so a
+    // platform wired up without one would render as a grey pill and silently
+    // lose the identification the tag exists for.
+    for (const platform of REVIEW_PLATFORMS) {
+      expect(REVIEW_PLATFORM_BRANDS[platform], `${platform} has no brand`).toBeTruthy();
+    }
+
+    // …and no two share a chip colour, since telling them apart is the point.
+    const chips = Object.values(REVIEW_PLATFORM_BRANDS).map((brand) => brand.chip);
+    expect(new Set(chips).size).toBe(chips.length);
   });
 });
 
