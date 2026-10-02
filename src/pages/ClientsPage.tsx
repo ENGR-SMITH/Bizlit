@@ -62,7 +62,7 @@ function subjectFor(client: Client, types: MessageType[]): string {
     case "two_day_checkin":
       return `Mid-week check-in — 3 moves worth knowing`;
     case "platform_info":
-      return `New data on your Market Watch desk`;
+      return `New data on your BIZLIT desk`;
     case "deals":
       return `Live deals you can promote today`;
     case "competitor_alert":

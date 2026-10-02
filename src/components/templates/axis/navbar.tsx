@@ -1,4 +1,4 @@
-import { Menu, ShieldCheck, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -59,10 +59,12 @@ export default function Navbar({ links }: { links: NavLink[] }) {
           )}
         >
           <a href="/" className="ml-2 flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <ShieldCheck size={18} />
-            </span>
-            <span className="text-sm font-medium tracking-tight">Market Watch</span>
+            <img
+              src="/logo.png"
+              alt="BIZLIT logo"
+              className="h-9 w-9 shrink-0 rounded-xl object-cover"
+            />
+            <span className="text-sm font-medium tracking-tight">BIZLIT</span>
           </a>
 
           <section className="hidden flex-row items-center gap-4 lg:flex">

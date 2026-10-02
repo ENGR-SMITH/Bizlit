@@ -89,7 +89,7 @@ function pullToRefresh() {
   });
 }
 
-describe("Market Watch app", () => {
+describe("BIZLIT app", () => {
   it("shows the competition page with the shared refresh surface", async () => {
     const content = await render();
     expect(content).toContain("Competition watch");
@@ -304,7 +304,7 @@ describe("Market Watch app", () => {
     });
 
     const content = text();
-    expect(content).toContain("Market Watch");
+    expect(content).toContain("BIZLIT");
     expect(content).toContain("Start free");
     expect(content).toContain("Watching for you");
     expect(content).toContain("Before you sign up.");

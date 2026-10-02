@@ -184,7 +184,7 @@ export function Layout({
   };
 
   const meta = PAGE_META[route];
-  const brand = data?.profile.brandName || "Market Watch";
+  const brand = data?.profile.brandName || "BIZLIT";
   const logoUrl = data?.profile.logoUrl ?? "";
 
   function openItem(id: RouteId) {
@@ -212,6 +212,22 @@ export function Layout({
             >
               <X size={16} />
             </button>
+          </div>
+
+          {/* App brand: the logo mark is always visible, the name once the rail is wide. */}
+          <div
+            className={`flex items-center gap-2.5 px-3 pt-3 pb-1 ${hovered ? "" : "lg:justify-center"}`}
+          >
+            <img
+              src="/logo.png"
+              alt="BIZLIT logo"
+              className="h-9 w-9 shrink-0 rounded-xl object-cover ring-1 ring-white/10"
+            />
+            <span
+              className={`text-sm font-semibold tracking-tight text-white ${hovered ? "" : "lg:hidden"}`}
+            >
+              BIZLIT
+            </span>
           </div>
 
           <nav className="mt-2 flex-1 overflow-y-auto px-3 pb-4">

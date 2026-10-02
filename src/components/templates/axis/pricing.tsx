@@ -35,7 +35,7 @@ export default function Pricing() {
         <Card className="overflow-hidden rounded-2xl border-0 bg-background/85 p-0 shadow-xl">
           <div className="flex flex-col md:flex-row">
             <div className="flex flex-col border-b border-border/30 p-8 md:basis-2/5 md:border-r md:border-b-0 md:p-10">
-              <h3 className="text-center text-4xl font-medium text-foreground">Market Watch</h3>
+              <h3 className="text-center text-4xl font-medium text-foreground">BIZLIT</h3>
               <p className="mt-1 text-center text-lg text-muted-foreground">
                 For independent retailers
                 <br />

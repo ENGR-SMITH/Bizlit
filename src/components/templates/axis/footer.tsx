@@ -1,4 +1,3 @@
-import { ShieldCheck } from "lucide-react";
 import { motion } from "motion/react";
 import { ThemeToggle } from "./theme-switch";
 import type { NavLink } from "./navbar";
@@ -27,10 +26,12 @@ export default function Footer({
       transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94] }}
     >
       <div className="flex items-center gap-2.5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-          <ShieldCheck size={18} />
-        </span>
-        <span className="text-sm font-medium tracking-tight">Market Watch</span>
+        <img
+          src="/logo.png"
+          alt="BIZLIT logo"
+          className="h-9 w-9 shrink-0 rounded-xl object-cover"
+        />
+        <span className="text-sm font-medium tracking-tight">BIZLIT</span>
       </div>
 
       <p className="max-w-md text-center text-sm text-muted-foreground">
@@ -69,7 +70,7 @@ export default function Footer({
       <ThemeToggle />
 
       <p className="text-muted-foreground">
-        © {new Date().getFullYear()} Market Watch. All rights reserved.
+        © {new Date().getFullYear()} BIZLIT. All rights reserved.
       </p>
     </motion.footer>
   );

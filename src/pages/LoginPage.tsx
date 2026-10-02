@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SignIn, SignUp } from "@clerk/clerk-react";
-import { BarChart3, Binoculars, Mail, ShieldCheck } from "lucide-react";
+import { BarChart3, Binoculars, Mail } from "lucide-react";
 import { configSummary } from "../lib/env";
 
 /**
@@ -86,11 +86,13 @@ export function LoginPage({
       <aside className="relative hidden flex-col justify-between bg-slate-900 px-10 py-12 text-slate-300 lg:flex">
         <div>
           <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500 text-white">
-              <ShieldCheck size={20} />
-            </span>
+            <img
+              src="/logo.png"
+              alt="BIZLIT logo"
+              className="h-10 w-10 shrink-0 rounded-xl object-cover ring-1 ring-white/10"
+            />
             <div>
-              <p className="text-base font-semibold text-white">Market Watch</p>
+              <p className="text-base font-semibold text-white">BIZLIT</p>
               <p className="text-xs text-slate-400">Competitor monitoring</p>
             </div>
           </div>
@@ -130,10 +132,12 @@ export function LoginPage({
       <main className="flex items-center justify-center bg-slate-50 px-4 py-10">
         <div className="w-full max-w-md">
           <div className="mb-4 flex items-center justify-center gap-2 lg:hidden">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white">
-              <ShieldCheck size={18} />
-            </span>
-            <span className="text-base font-semibold text-slate-900">Market Watch</span>
+            <img
+              src="/logo.png"
+              alt="BIZLIT logo"
+              className="h-9 w-9 shrink-0 rounded-xl object-cover"
+            />
+            <span className="text-base font-semibold text-slate-900">BIZLIT</span>
           </div>
 
           <a

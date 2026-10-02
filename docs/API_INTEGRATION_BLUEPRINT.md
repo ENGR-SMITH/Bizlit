@@ -1,4 +1,4 @@
-# Market Watch — API Integration Build Blueprint
+# BIZLIT — API Integration Build Blueprint
 
 **Document type:** implementation blueprint (phased plan + feature mapping)
 **Status:** Phases 0–5 implemented, including the AI enrichment in §5 Phase 5.5 — see the status block
@@ -6,7 +6,7 @@ on each phase in §5.
 **Owners:** engineering
 **Providers:** Apify · Mallary.ai · SerpApi (all AI-assisted). Review monitoring was originally scoped as
 its own vendor (Reviewflowz) — see the note on §3.3 for why it is now built from SerpApi and Apify.
-**App:** Market Watch — React 19 + Vite SPA, Clerk auth, Supabase Postgres/Storage, RLS per tenant
+**App:** BIZLIT — React 19 + Vite SPA, Clerk auth, Supabase Postgres/Storage, RLS per tenant
 
 > **Superseded — review provider.** Reviewflowz was replaced by **SerpApi** (Google, TripAdvisor) and
 > **Apify** (Yelp, G2, Capterra, Trustpilot); the provider slot is now `reviews` and the reader client is
@@ -18,7 +18,7 @@ its own vendor (Reviewflowz) — see the note on §3.3 for why it is now built f
 
 ## 1. Purpose and scope
 
-This document is the single source of truth for wiring four third-party platforms into Market Watch and
+This document is the single source of truth for wiring four third-party platforms into BIZLIT and
 for building the product features they unlock. It states, for every provider:
 
 - what the provider actually does,

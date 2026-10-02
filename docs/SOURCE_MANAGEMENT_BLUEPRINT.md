@@ -1,4 +1,4 @@
-# Market Watch — Source Management & Competitor Social Discovery Build Blueprint
+# BIZLIT — Source Management & Competitor Social Discovery Build Blueprint
 
 **Document type:** implementation blueprint (phased plan + feature mapping)
 **Status:** **Phases 0–4 complete**; one live pass outstanding. The actor question (the one hard gate)
@@ -12,7 +12,7 @@ all eight `APIFY_CONTACTS_*` secrets are set. What remains is the Clerk-authenti
 **Owners:** engineering
 **Providers:** Apify — `vdrmota/contact-info-scraper` (`9Sk4JJhEma9vBKqrg`), pinned as
 `APIFY_CONTACTS_ACTOR_ID`. No new vendor.
-**App:** Market Watch — React 19 + Vite SPA, Clerk auth, Supabase Postgres/Storage, RLS per tenant
+**App:** BIZLIT — React 19 + Vite SPA, Clerk auth, Supabase Postgres/Storage, RLS per tenant
 **Companion docs:** `docs/API_INTEGRATION_BLUEPRINT.md` (the provider gateway this builds on),
 `supabase/functions/README.md` (deployed functions), `LIVE_TEST_PLAN.md`.
 

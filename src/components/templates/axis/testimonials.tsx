@@ -81,7 +81,7 @@ export default function Testimonials() {
           From the people running the desk.
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-base text-muted-foreground">
-          Retail teams using Market Watch to catch competitor and visibility changes
+          Retail teams using BIZLIT to catch competitor and visibility changes
           before they cost a sale.
         </p>
       </div>

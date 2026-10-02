@@ -5,7 +5,6 @@ import {
   Bell,
   Binoculars,
   Mail,
-  ShieldCheck,
   Sparkles,
   Users,
 } from "lucide-react";
@@ -85,21 +84,21 @@ const SCREENS: {
     id: "competition",
     label: "Competition",
     icon: <Binoculars size={13} />,
-    url: "market-watch.app/#/competition",
+    url: "bizlit.app/#/competition",
     render: () => <CompetitionScreen />,
   },
   {
     id: "business",
     label: "My Business",
     icon: <BarChart3 size={13} />,
-    url: "market-watch.app/#/business",
+    url: "bizlit.app/#/business",
     render: () => <BusinessScreen />,
   },
   {
     id: "clients",
     label: "Clients",
     icon: <Users size={13} />,
-    url: "market-watch.app/#/clients",
+    url: "bizlit.app/#/clients",
     render: () => <ClientsScreen />,
   },
 ];
@@ -161,7 +160,7 @@ export function LandingPage() {
               {active.src ? (
                 <img
                   src={active.src}
-                  alt={`${active.label} screen in the Market Watch workspace`}
+                  alt={`${active.label} screen in the BIZLIT workspace`}
                   className="w-full"
                 />
               ) : (
@@ -209,7 +208,7 @@ function HeroPreview() {
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
           </span>
           <span className="ml-2 min-w-0 flex-1 truncate rounded-md bg-background px-2.5 py-1 text-[10px] text-muted-foreground ring-1 ring-border">
-            market-watch.app/#/competition
+            bizlit.app/#/competition
           </span>
           <Badge tone="good">live</Badge>
         </div>
@@ -217,9 +216,11 @@ function HeroPreview() {
         <div className="flex">
           {/* rail */}
           <div className="hidden w-14 shrink-0 flex-col items-center gap-2.5 bg-slate-900 py-4 sm:flex">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-500 text-white">
-              <ShieldCheck size={15} />
-            </span>
+            <img
+              src="/logo.png"
+              alt=""
+              className="h-8 w-8 shrink-0 rounded-lg object-cover"
+            />
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600 text-white">
               <Binoculars size={15} />
             </span>

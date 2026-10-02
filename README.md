@@ -1,4 +1,4 @@
-# Market Watch — Supplier & Competitor Monitoring Web App
+# BIZLIT — Supplier & Competitor Monitoring Web App
 
 A four-page workspace for a **Retail Market Watch & Ad Response** service: watch supplier sites,
 competitor sites, your own numbers and your client list in one place, on a daily, weekly or monthly

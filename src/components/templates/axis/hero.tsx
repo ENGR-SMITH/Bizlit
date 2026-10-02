@@ -19,7 +19,7 @@ export default function Hero({ preview }: { preview?: ReactNode }) {
         </p>
         <section className="flex flex-col gap-8">
           <p className="max-w-xl text-center text-base leading-relaxed text-muted-foreground md:text-xl lg:max-w-md lg:text-left">
-            Market Watch scans the rivals you sell against and your own search visibility, then
+            BIZLIT scans the rivals you sell against and your own search visibility, then
             tells you what changed and what to do about it.
           </p>
           <div className="flex flex-row gap-2">

@@ -2,11 +2,11 @@ import { daysAgo, daysAhead } from "../lib/format";
 import type { Client, MailAccount, SentMessage } from "../lib/types";
 
 export const mailAccount: MailAccount = {
-  senderName: "Market Watch Desk",
+  senderName: "BIZLIT Desk",
   loginEmail: "watch@yourretailbrand.com",
   replyTo: "alerts@yourretailbrand.com",
   secondaryEmail: "owner@yourretailbrand.com",
-  signature: "— Market Watch Desk · Market alerts for your retail brand",
+  signature: "— BIZLIT Desk · Market alerts for your retail brand",
   timezone: "Africa/Nairobi (GMT+3)",
   dailyDigest: true,
   sendFrequency: "weekly",

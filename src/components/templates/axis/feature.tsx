@@ -56,14 +56,14 @@ export default function Feature() {
         <section className="relative flex justify-center">
           <img
             src="/images/templates/axis/feature.webp"
-            alt="The Market Watch workspace showing competitor changes"
+            alt="The BIZLIT workspace showing competitor changes"
             width={720}
             height={480}
             className="h-auto w-full rounded-2xl max-md:hidden dark:hidden"
           />
           <img
             src="/images/templates/axis/feature-dark.webp"
-            alt="The Market Watch workspace showing competitor changes"
+            alt="The BIZLIT workspace showing competitor changes"
             width={720}
             height={480}
             className="hidden h-auto w-full rounded-2xl max-md:hidden dark:block"
@@ -86,14 +86,14 @@ export default function Feature() {
         <section className="relative flex justify-center">
           <img
             src="/images/templates/axis/feature-mobile.webp"
-            alt="The Market Watch workspace on mobile"
+            alt="The BIZLIT workspace on mobile"
             width={320}
             height={560}
             className="h-auto w-full rounded-2xl dark:hidden"
           />
           <img
             src="/images/templates/axis/feature-dark-mobile.webp"
-            alt="The Market Watch workspace on mobile"
+            alt="The BIZLIT workspace on mobile"
             width={320}
             height={560}
             className="hidden h-auto w-full rounded-2xl dark:block"

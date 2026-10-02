@@ -11,7 +11,6 @@ import {
   Loader2,
   Mail,
   Plus,
-  ShieldCheck,
   Store,
   Target,
   Trash2,
@@ -341,9 +340,11 @@ export function OnboardingPage() {
       <div className="mx-auto max-w-5xl">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white">
-              <ShieldCheck size={20} />
-            </span>
+            <img
+              src="/logo.png"
+              alt="BIZLIT logo"
+              className="h-10 w-10 shrink-0 rounded-xl object-cover"
+            />
             <div>
               <p className="text-base font-semibold text-slate-900">
                 {profile?.onboardingComplete ? "Business settings" : "Set up your monitoring"}
@@ -864,7 +865,7 @@ export function OnboardingPage() {
                     <Field label="Email signature">
                       <textarea
                         className={`${inputClass} h-20 resize-none`}
-                        placeholder="— Market Watch Desk · alerts for your store"
+                        placeholder="— BIZLIT Desk · alerts for your store"
                         value={form.signature}
                         onChange={(e) => patch({ signature: e.target.value })}
                       />
