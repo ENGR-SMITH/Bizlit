@@ -7,7 +7,7 @@ import {
 } from "./apify.ts";
 import { getEnv, hasEnv, requireEnv } from "./env.ts";
 import { HttpError } from "./errors.ts";
-import { localResultsOf, serpApi } from "./serpapi.ts";
+import { localResultsOf, serpApi, type SerpApiResponse } from "./serpapi.ts";
 
 /**
  * Review reading and replying, without a dedicated review-monitoring vendor.
@@ -353,6 +353,24 @@ const GOOGLE_PLACE_ID_RE = /^ChI[\w-]+$/;
 const NUMERIC_ID_RE = /^\d+$/;
 
 /**
+ * What a Google Maps lookup should be asked for, given the handle the user typed.
+ *
+ * A handle is very often the business's own website — `https://www.patagonia.com/home/`
+ * — and Maps will not resolve a path: "www.patagonia.com/home" comes back with no
+ * results, while "patagonia.com" resolves the listing correctly. So only the host
+ * is kept, the scheme and any path/query are dropped, and a leading `www.` goes too.
+ * A plain name ("Joe's Coffee, Austin") or an id has no slash and is passed through.
+ */
+function googleMapsQuery(handle: string): string {
+  const trimmed = handle.trim();
+  const host = trimmed
+    .replace(/^https?:\/\//i, "")
+    .split(/[/?#]/)[0]
+    .replace(/^www\./i, "");
+  return host || trimmed;
+}
+
+/**
  * SerpApi's review engines are addressed by a place id, not a URL, so a handle
  * the user typed as a URL or business name is resolved to one first. A handle
  * that already *is* an id is used as-is, which saves a billed search.
@@ -366,15 +384,30 @@ async function resolveGooglePlace(handle: string): Promise<{ data_id?: string; p
   const embedded = trimmed.match(/0x[0-9a-f]+:0x[0-9a-f]+/i);
   if (embedded) return { data_id: embedded[0] };
 
-  const query = trimmed.replace(/^https?:\/\//, "").replace(/\/+$/, "");
-  const response = await serpApi({ engine: "google_maps", q: query || trimmed, hl: "en" });
+  const query = googleMapsQuery(trimmed);
+  let response: SerpApiResponse;
+  try {
+    response = await serpApi({ engine: "google_maps", q: query || trimmed, hl: "en" });
+  } catch (cause) {
+    // SerpApi reports a lookup that matched nothing as an error string rather than
+    // an empty result set. It is the one case worth restating: the raw message ("Google
+    // hasn't returned any results for this query") does not tell the user that the
+    // handle is the problem or what a working one looks like.
+    if (cause instanceof Error && /hasn't returned any results/i.test(cause.message)) {
+      throw new HttpError(
+        409,
+        `Could not find a Google Maps listing for "${trimmed}". Paste the listing's own URL, its data_id (0x…:0x…), or its place_id (ChIJ…).`,
+      );
+    }
+    throw cause;
+  }
   const place = response.place_results ?? localResultsOf(response)[0];
   if (place?.data_id) return { data_id: String(place.data_id) };
   if (place?.place_id) return { place_id: String(place.place_id) };
 
   throw new HttpError(
     409,
-    `Could not find a Google Maps listing for "${trimmed}". Paste the listing's URL, or its data_id (0x…:0x…) or place_id (ChIJ…).`,
+    `Could not find a Google Maps listing for "${trimmed}". Paste the listing's own URL, its data_id (0x…:0x…), or its place_id (ChIJ…).`,
   );
 }
 

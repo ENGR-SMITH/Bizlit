@@ -69,7 +69,10 @@ export type PullOutcome =
        * nothing and touches only those sources.
        */
       mode: "sweep" | "collect";
-      /** The workspace-wide scans (search, social, benchmark). Empty when collecting. */
+      /**
+       * The workspace-wide scans (search, social, benchmark, reviews). Empty when
+       * collecting.
+       */
       live: ScanTally;
       /** The per-source catalogue reads on the Competition page. */
       site: ScanTally;
@@ -235,9 +238,12 @@ export function RefreshProvider({ children }: { children: ReactNode }) {
     setRefreshing(true);
     try {
       // Scans first, because re-reading on its own can only show what the last
-      // scan produced. Six live scans are workspace-wide (search, social, the
-      // competitor benchmark, website traffic, competitor advertising and the
-      // derived buy list); the site reads are one per watched source.
+      // scan produced. Seven live scans are workspace-wide (search, social, the
+      // competitor benchmark, tracked reviews, website traffic, competitor
+      // advertising and the derived buy list); the site reads are one per watched
+      // source. Reviews joined the sweep when the Social & reviews page lost its
+      // own "Scan reviews now" button: the gesture has to do what the button did,
+      // or a workspace would have no way left to pull a review profile forward.
       //
       // A collecting pull skips the live scans entirely: those are the part the
       // window protects, and running them would bill a second sweep just to show a
@@ -264,6 +270,10 @@ export function RefreshProvider({ children }: { children: ReactNode }) {
             // nothing and is the one live scan that still works when a provider is
             // refusing us.
             actions.runBuyList(),
+            // And the connected review pages, which the Social & reviews page used
+            // to sync with a button of its own. It is a no-op when no profile is
+            // connected, so a workspace that tracks no reviews pays nothing for it.
+            actions.runReviewScan(),
           ];
       // One read per competitor, bounded rather than all at once: each is an actor
       // job, the account caps how many may run together, and a whole workspace fired

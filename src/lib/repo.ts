@@ -1077,6 +1077,37 @@ export async function deleteBrandLogo(ownerUserId: string) {
   await updateBrandLogo(ownerUserId, "");
 }
 
+/**
+ * Saves the workspace's own social handles.
+ *
+ * The handles are a plain map on the business row (`social_handles`), keyed by
+ * platform label, and this is the only writer of it after onboarding — which is
+ * what lets the Social page add and remove them without re-running setup. Blank
+ * entries are dropped so an emptied field removes the handle rather than storing
+ * an empty string that would render as a connected-but-blank channel.
+ */
+export async function saveSocialHandles(
+  businessId: string,
+  handles: Record<string, string>,
+): Promise<Record<string, string>> {
+  const db = requireSupabase();
+  const cleaned: Record<string, string> = {};
+  for (const [platform, handle] of Object.entries(handles)) {
+    const key = platform.trim();
+    const value = handle.trim();
+    if (!key || !value) continue;
+    cleaned[key] = value;
+  }
+
+  const { error } = await db
+    .from("businesses")
+    .update({ social_handles: cleaned })
+    .eq("id", businessId);
+  if (error) throw new Error(error.message);
+
+  return cleaned;
+}
+
 export async function markReviewScanComplete(businessId: string) {
   const db = requireSupabase();
   const now = new Date().toISOString();
@@ -1593,6 +1624,40 @@ export async function deleteReviewConnection(connectionId: string) {
       .eq("kind", "review_profile")
       .eq("external_id", `${String(data.platform)}:${String(data.handle)}`);
   }
+}
+
+/**
+ * Records a reply the user posted by hand.
+ *
+ * Posting a reply needs a platform business API — Google's is not connected on
+ * this deployment — so the reply composer is still useful for drafting and
+ * copying, and this is what takes the review out of "needs a reply" once the
+ * user has pasted it on the platform. The text is kept on the review and in the
+ * reply history, so the audit trail is the same shape as a posted reply.
+ */
+export async function saveManualReviewReply(
+  businessId: string,
+  reviewId: string,
+  reply: string,
+): Promise<{ repliedAt: string }> {
+  const db = requireSupabase();
+  const repliedAt = new Date().toISOString();
+
+  const { error } = await db
+    .from("my_reviews")
+    .update({ replied: true, reply_text: reply, replied_at: repliedAt })
+    .eq("id", reviewId)
+    .eq("business_id", businessId);
+  if (error) throw new Error(error.message);
+
+  await db.from("review_replies").insert({
+    business_id: businessId,
+    review_id: reviewId,
+    body: reply,
+    status: "manual",
+  });
+
+  return { repliedAt };
 }
 
 /* ------------------------------------------------- competitor social handles */

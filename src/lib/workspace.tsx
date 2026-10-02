@@ -32,9 +32,11 @@ import {
   removeBuyListItem,
   saveKeywordIdea as saveTrackedKeyword,
   saveMailAccountRow,
+  saveManualReviewReply,
   saveCompetitorSocialHandle,
   saveCompetitorSocialHandles,
   saveReviewConnection,
+  saveSocialHandles,
   setCompetitorCadence,
   updateBrandLogo,
   updateClientRow,
@@ -280,6 +282,12 @@ export interface WorkspaceActions {
   /** Sends a reply to one review through the gateway. */
   replyToReview: (reviewId: string, reply: string) => Promise<void>;
   /**
+   * Records a reply the user posted on the review platform by hand. Used when the
+   * deployment cannot post replies itself, so the draft the app produced still
+   * counts as handled instead of the review sitting in "needs a reply" forever.
+   */
+  recordManualReviewReply: (reviewId: string, reply: string) => Promise<void>;
+  /**
    * Re-runs the Google search/local scan for the tracked keywords. Resolves with
    * the gateway's summary (null in demo mode), which reports a budget-capped run.
    */
@@ -344,6 +352,12 @@ export interface WorkspaceActions {
    * any accounts are connected afterwards.
    */
   connectSocialAccounts: () => Promise<boolean>;
+  /**
+   * Replaces the user's own social handles. These are what the Social tab lists
+   * and what a channel's score is checked against, so this is the only way to add
+   * or remove one after onboarding. A platform omitted from the map is removed.
+   */
+  saveOwnSocialHandles: (handles: Record<string, string>) => Promise<void>;
   /** Fetches Google Autocomplete ideas for a seed term and stores them. */
   findKeywordIdeas: (seed: string) => Promise<KeywordIdea[]>;
   /** Promotes an autocomplete suggestion into the tracked keyword list. */
@@ -681,6 +695,18 @@ function DemoWorkspaceProvider({ children }: { children: ReactNode }) {
           },
         }));
       },
+      async recordManualReviewReply(reviewId, reply) {
+        const now = new Date().toISOString();
+        patchData((current) => ({
+          ...current,
+          latestReviewScan: {
+            ...current.latestReviewScan,
+            items: current.latestReviewScan.items.map((r) =>
+              r.id === reviewId ? { ...r, replied: true, replyText: reply, repliedAt: now } : r,
+            ),
+          },
+        }));
+      },
       async runSerpScan() {
         // No provider credentials in demo mode — the sample scan already stands in,
         // so the panel has something to show without inventing new numbers.
@@ -785,6 +811,12 @@ function DemoWorkspaceProvider({ children }: { children: ReactNode }) {
             : { ...current, socialAccounts: sampleSocialAccounts },
         );
         return true;
+      },
+      async saveOwnSocialHandles(handles) {
+        patchData((current) => ({
+          ...current,
+          profile: { ...current.profile, socialHandles: handles },
+        }));
       },
       async findKeywordIdeas(seed) {
         const ideas = sampleKeywordIdeas(seed);
@@ -1316,6 +1348,25 @@ function LiveWorkspaceProvider({ children }: { children: ReactNode }) {
           throw cause;
         }
       },
+      async recordManualReviewReply(reviewId, reply) {
+        if (!dbEnabled || !profile) return;
+        const body = reply.trim();
+        if (!body) return;
+        await withBusiness(async (business) => {
+          const saved = await saveManualReviewReply(business.id, reviewId, body);
+          patchData((current) => ({
+            ...current,
+            latestReviewScan: {
+              ...current.latestReviewScan,
+              items: current.latestReviewScan.items.map((r) =>
+                r.id === reviewId
+                  ? { ...r, replied: true, replyText: body, repliedAt: saved.repliedAt }
+                  : r,
+              ),
+            },
+          }));
+        });
+      },
       // The scan/benchmark calls report failures to the caller as well as the
       // workspace `error` state: that state is not rendered once data has loaded,
       // so swallowing the error here would leave the page free to show a success
@@ -1469,6 +1520,16 @@ function LiveWorkspaceProvider({ children }: { children: ReactNode }) {
           setError(cause instanceof Error ? cause.message : "Could not load your social accounts.");
           throw cause;
         }
+      },
+      async saveOwnSocialHandles(handles) {
+        if (!dbEnabled) return;
+        await withBusiness(async (business) => {
+          const saved = await saveSocialHandles(business.id, handles);
+          patchData((current) => ({
+            ...current,
+            profile: { ...current.profile, socialHandles: saved },
+          }));
+        });
       },
       async findKeywordIdeas(seed) {
         if (!dbEnabled || !profile) return sampleKeywordIdeas(seed);

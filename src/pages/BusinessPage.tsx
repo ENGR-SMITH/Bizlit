@@ -478,11 +478,14 @@ export function BusinessPage() {
                       : "No AI answer checked yet — the GEO pass runs with your keyword scan."}
                 </p>
                 <p className="mt-1 text-[11px] text-slate-500">
-                  {/* What the ring measures, now that it is coverage rather than a
-                      ratio over whichever overviews we managed to read. */}
-                  Scored across every tracked term checked for an AI answer — a term
-                  the answer leaves you out of scores nothing — and a listed source
-                  counts for more than a passing mention in the prose.
+                  {/* What the ring measures, now that it is coverage over every
+                      scanned term rather than a ratio over whichever overviews we
+                      managed to read. */}
+                  Scored across every tracked term the scan checked for an AI answer —
+                  a term the answer leaves you out of scores nothing, and a term whose
+                  answer the monthly budget stopped us reading counts as not cited
+                  rather than being dropped — and a listed source counts for more than
+                  a passing mention in the prose.
                 </p>
               </div>
             </div>
@@ -665,8 +668,9 @@ export function BusinessPage() {
                 </div>
               )}
               <div className="border-t border-slate-100 px-4 py-3 text-[11px] text-slate-500">
-                “Cited” means the answer named you or linked one of your pages. This reads
-                Google's AI Overview only — no other assistant is claimed.
+                “Cited” means the answer named you or linked one of your pages. A term Google
+                answered without an AI Overview is listed as “no answer”. This reads Google's
+                AI Overview only — no other assistant is claimed.
               </div>
             </Card>
           </div>

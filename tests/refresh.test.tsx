@@ -88,6 +88,9 @@ function harness(options: { pendingCompetitors?: string[] } = {}) {
     // Derived from data already on file, so it costs nothing — but it runs with
     // the sweep so the Buy list is never stale next to the panels it relates to.
     runBuyList: record("runBuyList"),
+    // The connected review pages. A no-op without one, but it runs with the sweep
+    // now that Social & reviews has no "Scan reviews now" button of its own.
+    runReviewScan: record("runReviewScan"),
     scanCompetitorSite: async (competitorId: string) => {
       calls.push(`scanCompetitorSite:${competitorId}`);
       return null;
@@ -231,19 +234,20 @@ describe("pull-to-refresh cap", () => {
     expect(outcome).toMatchObject({
       status: "refreshed",
       mode: "sweep",
-      // Search, social, the competitor benchmark, website traffic, competitor
-      // advertising and the derived buy list — every one of them a panel that
-      // would otherwise go stale between visits.
-      live: { ran: 6, attempted: 6 },
+      // Search, social, the competitor benchmark, tracked reviews, website
+      // traffic, competitor advertising and the derived buy list — every one of
+      // them a panel that would otherwise go stale between visits.
+      live: { ran: 7, attempted: 7 },
       site: { ran: watched, attempted: watched },
     });
-    expect(spec.calls.slice(0, 6)).toEqual([
+    expect(spec.calls.slice(0, 7)).toEqual([
       "runSerpScan",
       "runSocialScan",
       "runCompetitorBenchmark",
       "runTrafficScan",
       "runAdsScan",
       "runBuyList",
+      "runReviewScan",
     ]);
     // Stamped on a sweep — and on purpose before the re-read, so a reload that
     // then fails cannot hand back a free retry that bills every source twice.

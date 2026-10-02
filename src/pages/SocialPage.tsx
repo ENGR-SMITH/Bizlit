@@ -1,5 +1,7 @@
 import { useState } from "react";
 import {
+  Check,
+  Copy,
   Link2,
   MessageSquareQuote,
   Plus,
@@ -10,6 +12,7 @@ import {
   Store,
   ThumbsDown,
   ThumbsUp,
+  X,
 } from "lucide-react";
 import {
   Badge,
@@ -27,7 +30,7 @@ import {
 } from "../components/primitives";
 import { Modal } from "../components/Modal";
 import { AreaChart, DeltaPill, Stars } from "../components/charts";
-import { useActionToast, useToast } from "../components/Toast";
+import { useToast } from "../components/Toast";
 import { platformLabel, summariseChannelSocial, summariseSocial } from "../lib/social";
 import { compact, relativeTime, shortDate } from "../lib/format";
 import { useWorkspace, useWorkspaceData } from "../lib/workspace";
@@ -42,6 +45,20 @@ type SocialTab = "reviews" | "social";
  */
 const REVIEW_PLATFORMS = ["google", "yelp", "g2", "trustpilot", "capterra", "tripadvisor"] as const;
 
+/**
+ * Suggestions for the "add your own handle" form. Free text is allowed too, so a
+ * platform that is not listed can still be added — these only save typing.
+ */
+const OWN_SOCIAL_PLATFORMS = [
+  "Instagram",
+  "TikTok",
+  "Facebook",
+  "X (Twitter)",
+  "YouTube",
+  "LinkedIn",
+  "Pinterest",
+] as const;
+
 /** Percent change that survives a missing previous value. */
 function deltaPct(current: number, previous: number): number {
   if (!previous) return 0;
@@ -49,7 +66,6 @@ function deltaPct(current: number, previous: number): number {
 }
 
 export function SocialPage() {
-  const actionToast = useActionToast();
   const workspace = useWorkspaceData();
   const { actions } = useWorkspace();
 
@@ -62,10 +78,30 @@ export function SocialPage() {
   /** Set once a draft has been written, so the composer can say what it was. */
   const [draftTone, setDraftTone] = useState("");
   const [drafting, setDrafting] = useState(false);
+  /**
+   * Why the last send failed, when the platform will not accept a reply from
+   * here. Set only after a real attempt, so the manual fallback is offered for
+   * the actual reason rather than shown on every deployment.
+   */
+  const [sendError, setSendError] = useState("");
   const [connectOpen, setConnectOpen] = useState(false);
   const [connectPlatform, setConnectPlatform] = useState<string>("google");
   const [connectHandle, setConnectHandle] = useState("");
+  const [handlePlatform, setHandlePlatform] = useState("");
+  const [handleValue, setHandleValue] = useState("");
   const toast = useToast();
+
+  // Sorted so the list does not reshuffle as a map is rebuilt on every save.
+  const handleEntries = Object.entries(profile.socialHandles).sort(([a], [b]) =>
+    a.localeCompare(b),
+  );
+
+  // Whether the active tab has anything behind it. Until a review page is connected
+  // or a handle is added there is nothing to analyse, so the tab shows its connect
+  // card alone instead of panels that would all read empty.
+  const reviewsConnected = reviewConnections.length > 0;
+  const socialConnected = handleEntries.length > 0;
+  const tabConnected = tab === "reviews" ? reviewsConnected : socialConnected;
 
   // Measured from the posts we actually scraped, so the declared numbers on the
   // channel rows can be checked against behaviour.
@@ -77,28 +113,49 @@ export function SocialPage() {
   const decliningSource = reviewSources.find((s) => s.score < s.previousScore);
   const totalReviews = reviewSources.reduce((sum, s) => sum + s.reviews, 0);
 
-  function runReviewScan() {
-    void actionToast(
-      async () => {
-        const result = await actions.runReviewScan();
-        if (result) {
-          toast(
-            `Synced ${result.profiles} profile${result.profiles === 1 ? "" : "s"} — ${result.reviews} review${result.reviews === 1 ? "" : "s"}${result.flagged ? `, ${result.flagged} need a reply` : ""}.${result.running ? ` ${result.running} still running — the next sync collects it.` : ""}`,
-          );
-        }
-      },
-      {
-        success: "Review scan queued — new reviews and replies appear as soon as it finishes.",
-        failure: "The review scan could not be queued.",
-      },
-    );
-  }
-
   /** Opens the reply composer, seeded with the suggested action text. */
   function openReply(review: MyReview) {
     setReplyTarget(review);
     setReplyText(review.action || "");
     setDraftTone("");
+    setSendError("");
+  }
+
+  /** Puts the reply on the clipboard so it can be pasted onto the review page. */
+  async function copyReply() {
+    const body = replyText.trim();
+    if (!body) {
+      toast("Write a reply before copying it.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(body);
+      toast("Reply copied — paste it on the review platform.");
+    } catch {
+      toast("Could not copy automatically — select the text and copy it by hand.");
+    }
+  }
+
+  /**
+   * Records a reply the user posted on the platform themselves. This is the path
+   * that works without a platform business API: the review stops asking for a
+   * reply and keeps the text that was posted.
+   */
+  async function markReplied() {
+    if (!replyTarget) return;
+    const target = replyTarget;
+    const body = replyText.trim();
+    if (!body) {
+      toast("Write a reply before marking it handled.");
+      return;
+    }
+    try {
+      await actions.recordManualReviewReply(target.id, body);
+      toast(`Marked ${target.author}'s review as replied.`);
+      setReplyTarget(null);
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : "That review could not be marked as replied.");
+    }
   }
 
   /**
@@ -136,7 +193,9 @@ export function SocialPage() {
       toast(`Reply sent to ${target.author}.`);
       setReplyTarget(null);
     } catch (cause) {
-      toast(cause instanceof Error ? cause.message : "The reply could not be sent.");
+      const message = cause instanceof Error ? cause.message : "The reply could not be sent.";
+      setSendError(message);
+      toast(message);
     }
   }
 
@@ -146,6 +205,48 @@ export function SocialPage() {
       toast("Review profile disconnected.");
     } catch (cause) {
       toast(cause instanceof Error ? cause.message : "That profile could not be removed.");
+    }
+  }
+
+  /**
+   * Saves one handle into the workspace's own map. One handle per platform,
+   * matched case-insensitively, so "instagram" and "Instagram" cannot become two
+   * rows — the later one replaces the earlier.
+   */
+  async function addHandle() {
+    const platform = handlePlatform.trim();
+    const value = handleValue.trim();
+    if (!platform) {
+      toast("Name the platform you are adding.");
+      return;
+    }
+    if (!value) {
+      toast("Add the handle or the profile URL.");
+      return;
+    }
+    const next = { ...profile.socialHandles };
+    for (const key of Object.keys(next)) {
+      if (key.trim().toLowerCase() === platform.toLowerCase()) delete next[key];
+    }
+    next[platform] = value;
+    try {
+      await actions.saveOwnSocialHandles(next);
+      setHandlePlatform("");
+      setHandleValue("");
+      toast(`${platformLabel(platform)} handle saved.`);
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : "That handle could not be saved.");
+    }
+  }
+
+  async function removeHandle(platform: string) {
+    const next = { ...profile.socialHandles };
+    delete next[platform];
+    try {
+      await actions.saveOwnSocialHandles(next);
+      toast(`${platformLabel(platform)} handle removed.`);
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : "That handle could not be removed.");
     }
   }
 
@@ -171,7 +272,10 @@ export function SocialPage() {
 
   return (
     <div className="space-y-5">
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* The summary numbers only mean something once the tab they describe has a
+          connection behind it; before that the connect card is the whole page. */}
+      {tabConnected ? (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat
           label="Average rating"
           value={latestReviewScan.averageRating || "—"}
@@ -196,16 +300,8 @@ export function SocialPage() {
           icon={<Share2 size={16} />}
           hint={profile.socialHandles ? "handles connected" : "add handles in settings"}
         />
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-        <button type="button" className={btnPrimary} onClick={runReviewScan}>
-          <RefreshCw size={14} /> Scan reviews now
-        </button>
-        <span className="ml-auto text-[11px] text-slate-500">
-          Last scan {relativeTime(lastScan)} · next {shortDate(latestReviewScan.nextScanAt)}
-        </span>
-      </div>
+        </div>
+      ) : null}
 
       <Tabs
         value={tab}
@@ -217,7 +313,26 @@ export function SocialPage() {
       />
 
       {/* ------------------------------------------------ my reviews */}
-      {tab === "reviews" ? (
+      {tab === "reviews" && !reviewsConnected ? (
+        <Card>
+          <CardHead
+            icon={<Link2 size={16} />}
+            title="Connect your review pages"
+            subtitle="Add the public review pages you are on and their reviews sync here"
+          />
+          <EmptyState
+            title="No review pages connected yet"
+            hint="Connect at least one public review page — Google, Trustpilot, Yelp or another — and its reviews, scores and reply queue appear here. Nothing is read from a page you have not added."
+            action={
+              <button type="button" className={btnPrimary} onClick={() => setConnectOpen(true)}>
+                <Plus size={14} /> Connect a review profile
+              </button>
+            }
+          />
+        </Card>
+      ) : null}
+
+      {tab === "reviews" && reviewsConnected ? (
         <div className="grid gap-5 xl:grid-cols-3">
           <Card className="xl:col-span-2">
             <CardHead
@@ -270,12 +385,7 @@ export function SocialPage() {
             <CardHead
               icon={<RefreshCw size={16} />}
               title="Latest review scan"
-              subtitle={`Scanned ${relativeTime(lastScan)} · next ${shortDate(latestReviewScan.nextScanAt)}`}
-              action={
-                <button type="button" className={btnPrimary} onClick={runReviewScan}>
-                  <RefreshCw size={13} /> Scan now
-                </button>
-              }
+              subtitle={`Scanned ${relativeTime(lastScan)} · next ${shortDate(latestReviewScan.nextScanAt)} — pull down to refresh`}
             />
             <div className="grid grid-cols-3 gap-2 border-b border-slate-100 px-4 py-3 text-center">
               <div>
@@ -393,8 +503,86 @@ export function SocialPage() {
 
       {/* ------------------------------------------------ social */}
       {tab === "social" ? (
-        <div className="grid gap-5 xl:grid-cols-3">
-          <Card className="xl:col-span-2">
+        <div className="space-y-5">
+          <Card>
+            <CardHead
+              icon={<Share2 size={16} />}
+              title="Your social handles"
+              subtitle="Add or remove the profiles you run — your channel rows are checked against these"
+              action={<Badge tone="brand">{handleEntries.length} saved</Badge>}
+            />
+            <div className="px-4 py-4">
+              {handleEntries.length === 0 ? (
+                <p className="text-[11px] text-slate-500">
+                  No handles yet. Add the profiles you post from below and they appear on your
+                  channel rows.
+                </p>
+              ) : (
+                <ul className="flex flex-wrap gap-2">
+                  {handleEntries.map(([platform, handle]) => (
+                    <li
+                      key={platform}
+                      className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 py-1 pr-1.5 pl-3"
+                    >
+                      <span className="text-[11px] font-medium text-slate-800">
+                        {platformLabel(platform)}
+                      </span>
+                      <span className="text-[11px] text-slate-500">{handle}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${platformLabel(platform)}`}
+                        onClick={() => void removeHandle(platform)}
+                        className="rounded-full p-0.5 text-slate-400 transition hover:bg-white hover:text-rose-600"
+                      >
+                        <X size={12} />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-end gap-2">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">Platform</span>
+                  <input
+                    className={`${inputClass} w-44`}
+                    list="own-social-platforms"
+                    placeholder="Instagram"
+                    value={handlePlatform}
+                    onChange={(event) => setHandlePlatform(event.target.value)}
+                  />
+                  <datalist id="own-social-platforms">
+                    {OWN_SOCIAL_PLATFORMS.map((platform) => (
+                      <option key={platform} value={platform} />
+                    ))}
+                  </datalist>
+                </label>
+                <label className="block min-w-[12rem] flex-1">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">
+                    Handle or URL
+                  </span>
+                  <input
+                    className={inputClass}
+                    placeholder="@yourbrand or a full profile URL"
+                    value={handleValue}
+                    onChange={(event) => setHandleValue(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") void addHandle();
+                    }}
+                  />
+                </label>
+                <button type="button" className={btnPrimary} onClick={() => void addHandle()}>
+                  <Plus size={14} /> Save handle
+                </button>
+              </div>
+            </div>
+          </Card>
+
+          {/* The scores and benchmarks only exist once a handle is declared, so they
+              sit behind the handles card rather than beside an empty one. */}
+          {socialConnected ? (
+          <div className="grid gap-5 xl:grid-cols-3">
+            <Card className="xl:col-span-2">
             <CardHead
               icon={<Share2 size={16} />}
               title="Social media score & where to focus"
@@ -557,6 +745,8 @@ export function SocialPage() {
               your SEO and GEO scores.
             </div>
           </Card>
+          </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -580,6 +770,9 @@ export function SocialPage() {
               onClick={() => void draftReply()}
             >
               <Sparkles size={13} /> {drafting ? "Drafting…" : "Draft with AI"}
+            </button>
+            <button type="button" className={btnGhost} onClick={() => void copyReply()}>
+              <Copy size={13} /> Copy
             </button>
             <button type="button" className={btnGhost} onClick={() => setReplyTarget(null)}>
               Cancel
@@ -609,6 +802,16 @@ export function SocialPage() {
               <p className="flex items-center gap-1.5 text-[11px] text-slate-500">
                 <Sparkles size={12} /> Drafted with a {draftTone} tone. Sending is still yours to do.
               </p>
+            ) : null}
+            {sendError ? (
+              <div className="space-y-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                <p>{sendError}</p>
+                {/* The fallback for a platform this deployment cannot post to:
+                    copy the reply across, then record it here by hand. */}
+                <button type="button" className={btnGhost} onClick={() => void markReplied()}>
+                  <Check size={13} /> I posted it myself — mark as replied
+                </button>
+              </div>
             ) : null}
           </div>
         ) : null}

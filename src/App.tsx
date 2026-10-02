@@ -25,7 +25,8 @@ function AppShell() {
   return (
     <Layout route={route} navigate={navigate}>
       {/* The monitoring pages share one workspace, so they share one drag-down
-          refresh instead of a reload control each. */}
+          refresh instead of a reload control each — including the review sync
+          that Social & reviews used to run from a button of its own. */}
       {route === "competition" ? (
         <PullToRefresh>
           <CompetitionPage />
@@ -37,7 +38,11 @@ function AppShell() {
           <BusinessPage />
         </PullToRefresh>
       ) : null}
-      {route === "social" ? <SocialPage /> : null}
+      {route === "social" ? (
+        <PullToRefresh>
+          <SocialPage />
+        </PullToRefresh>
+      ) : null}
       {route === "inventory" ? <InventoryPage /> : null}
       {route === "promotion" ? <PromotionPage /> : null}
       {route === "notifications" ? <NotificationsPage /> : null}

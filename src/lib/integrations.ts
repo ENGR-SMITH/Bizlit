@@ -392,14 +392,17 @@ export interface SerpScanResult {
     overviewsRequested: number;
     cited: number;
     /**
-     * Terms assessed for an AI answer — read overviews plus terms Google served no
-     * overview for. This is the denominator of `score`: coverage is measured against
-     * it, and a term whose answer existed but could not be read is excluded.
+     * Terms assessed for an AI answer — read overviews, terms Google served no
+     * overview for, and terms whose answer existed but could not be read. This is
+     * the denominator of `score`: coverage is measured against it, so a run that
+     * could not read most of its terms cannot report a perfect score.
      */
     checked?: number;
     score: number | null;
     /** True when the monthly budget stopped the overview reads early. */
     capped: boolean;
+    /** Terms whose answer we could not read, counted as unread misses. */
+    unread?: number;
   };
   /** True when the workspace's monthly budget, not the tracked list, cut the run short. */
   capped: boolean;

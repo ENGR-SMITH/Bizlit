@@ -468,6 +468,67 @@ describe("Market Watch app", () => {
     expect(text()).toContain("Reply sent to Peter M.");
   });
 
+  it("adds and removes one of your own social handles", async () => {
+    await render();
+    click(findByText("button", "Social & reviews"));
+    click(findByText("button", "Social media"));
+
+    expect(text()).toContain("Your social handles");
+    // The sample workspace already declares two of its own handles.
+    expect(text()).toContain("@yourretailbrand");
+
+    typeInto(container.querySelector<HTMLInputElement>('input[placeholder="Instagram"]'), "YouTube");
+    typeInto(
+      container.querySelector<HTMLInputElement>(
+        'input[placeholder="@yourbrand or a full profile URL"]',
+      ),
+      "@yourbrandtube",
+    );
+    click(findByText("button", "Save handle"));
+    await act(async () => {});
+
+    expect(text()).toContain("@yourbrandtube");
+
+    click(container.querySelector('button[aria-label="Remove YouTube"]'));
+    await act(async () => {});
+
+    expect(text()).not.toContain("@yourbrandtube");
+  });
+
+  it("asks for a review page before showing the review sections", async () => {
+    await render();
+    click(findByText("button", "Social & reviews"));
+
+    // Remove every sample connection; with none left the tab is the connect card
+    // alone, not a wall of panels that would all read empty.
+    let guard = 0;
+    while (findByText("button", "Remove") && guard++ < 10) {
+      click(findByText("button", "Remove"));
+      await act(async () => {});
+    }
+
+    expect(text()).toContain("No review pages connected yet");
+    expect(text()).not.toContain("Review page analysis");
+    expect(text()).not.toContain("Latest review scan");
+  });
+
+  it("asks for a social handle before showing the social sections", async () => {
+    await render();
+    click(findByText("button", "Social & reviews"));
+    click(findByText("button", "Social media"));
+
+    click(container.querySelector('button[aria-label="Remove Instagram"]'));
+    await act(async () => {});
+    click(container.querySelector('button[aria-label="Remove TikTok"]'));
+    await act(async () => {});
+
+    // The add-handle card stays (it holds the form), and nothing below it shows.
+    expect(text()).toContain("Your social handles");
+    expect(text()).toContain("No handles yet");
+    expect(text()).not.toContain("Social media score & where to focus");
+    expect(text()).not.toContain("Competitor social channels");
+  });
+
   it("drafts a review reply with AI without sending it", async () => {
     await render();
     click(findByText("button", "Social & reviews"));

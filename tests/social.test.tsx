@@ -21,6 +21,10 @@ import {
   tagsInCaption,
   toIsoTimestamp,
 } from "../supabase/functions/_shared/apify";
+import {
+  bestBenchmarkByPlatform,
+  scoreOwnProfile,
+} from "../supabase/functions/_shared/socialScore";
 import type { SocialPost } from "../src/lib/types";
 
 /** A post with sensible defaults, so each test only states what it is about. */
@@ -486,5 +490,104 @@ describe("live X actor field names", () => {
     expect(normalisePost({ id: "2", text: "hi", media: "https://pbs.twimg.com/media/y.jpg" }, "x")?.mediaUrl).toBe(
       "https://pbs.twimg.com/media/y.jpg",
     );
+  });
+});
+
+describe("scoring the workspace's own social profiles", () => {
+  const best = {
+    competitorId: "rival-1",
+    name: "GlowMart Beauty",
+    followers: 20_000,
+    engagement: 4,
+  };
+
+  it("sets the score against the best rival and reports the raw gap", () => {
+    const score = scoreOwnProfile(
+      { platform: "instagram", handle: "@yourbrand", followers: 10_000, engagement: 2 },
+      best,
+      8_000,
+    );
+
+    expect(score.platform).toBe("Instagram");
+    expect(score.handle).toBe("@yourbrand");
+    // Half the rival's followers and half its engagement → 50.
+    expect(score.score).toBe(50);
+    // Growth is against the previous scan's own figure, not the rival's.
+    expect(score.growth).toBe(25);
+    expect(score.benchmarkGap).toBe(-10_000);
+    expect(score.focus).toBe("medium");
+    expect(score.reason).toContain("GlowMart Beauty");
+  });
+
+  it("caps the score at 100 when the workspace is ahead on both counts", () => {
+    const score = scoreOwnProfile(
+      { platform: "tiktok", handle: "@yourbrand", followers: 30_000, engagement: 5 },
+      best,
+      0,
+    );
+
+    expect(score.score).toBe(100);
+    expect(score.benchmarkGap).toBe(10_000);
+    expect(score.focus).toBe("low");
+    // No previous figure is a baseline, not a growth of zero percent.
+    expect(score.growth).toBe(0);
+  });
+
+  it("is the profile's own standing when no rival is measured on the platform", () => {
+    const score = scoreOwnProfile(
+      { platform: "facebook", handle: "@yourbrand", followers: 1_000, engagement: 0 },
+      null,
+      0,
+    );
+
+    expect(score.benchmarkGap).toBe(0);
+    expect(score.reason).toContain("No competitor");
+    // 65% of a full audience score and 35% of nothing.
+    expect(score.score).toBe(65);
+  });
+
+  it("scores an unmeasured or empty profile as needing focus, never as a pass", () => {
+    const score = scoreOwnProfile(
+      { platform: "instagram", handle: "@yourbrand", followers: 0, engagement: 0 },
+      best,
+      0,
+    );
+
+    expect(score.score).toBe(0);
+    expect(score.focus).toBe("high");
+  });
+
+  it("picks the biggest rival per platform from the reads already on file", () => {
+    const benchmarks = bestBenchmarkByPlatform(
+      [
+        { competitor_id: "a", platform: "Instagram", followers: 1_000 },
+        { competitor_id: "b", platform: "instagram", followers: 5_000 },
+      ],
+      [
+        { competitor_id: "b", platform: "instagram", likes: 100, comments: 50, engagement_rate: 3 },
+        { competitor_id: "a", platform: "instagram", likes: 10, comments: 0, engagement_rate: 9 },
+      ],
+      new Map([
+        ["a", "Alpha"],
+        ["b", "Beta"],
+      ]),
+    );
+
+    expect(benchmarks.get("instagram")).toMatchObject({
+      competitorId: "b",
+      name: "Beta",
+      followers: 5_000,
+      engagement: 3,
+    });
+  });
+
+  it("derives an engagement rate when the post row did not store one", () => {
+    const benchmarks = bestBenchmarkByPlatform(
+      [{ competitor_id: "a", platform: "x", followers: 10_000 }],
+      [{ competitor_id: "a", platform: "x", likes: 100, comments: 0, engagement_rate: 0 }],
+      new Map([["a", "Alpha"]]),
+    );
+
+    expect(benchmarks.get("x")?.engagement).toBe(1);
   });
 });

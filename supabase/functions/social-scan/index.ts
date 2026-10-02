@@ -22,6 +22,12 @@ import {
   type ApifyRun,
   type SocialPlatform,
 } from "../_shared/apify.ts";
+import {
+  bestBenchmarkByPlatform,
+  scoreOwnProfile,
+  type CompetitorPostRow,
+  type CompetitorSocialRow,
+} from "../_shared/socialScore.ts";
 
 /**
  * Competitor social scan (Apify).
@@ -88,6 +94,25 @@ interface Target {
   state?: TargetRow;
 }
 
+/**
+ * Scrape state for one of the workspace's **own** handles.
+ *
+ * Own profiles have no competitor row to hang off, so they use
+ * `social_monitor_targets` with `competitor_id` null — the same table, the same
+ * "one run is kept and collected" guarantee. The unique index does not cover a
+ * null competitor, so the row is found and updated by id rather than upserted.
+ */
+interface OwnTargetState {
+  id: string;
+  platform: string;
+  last_scraped_at: string | null;
+  last_run_id: string;
+  last_run_status: string;
+  last_error: string;
+  /** Bumped by the table's trigger on every write, including a failed one. */
+  updated_at: string | null;
+}
+
 /** Hard caps per invocation and per run, so a scan cannot run away. */
 const MAX_TARGETS = 5;
 const DEFAULT_TARGETS = 2;
@@ -101,6 +126,38 @@ const MIN_CHARGE_USD = 0.01;
 const RESTATE_LIMIT = 500;
 /** How long we will wait across all the runs we started, in total. */
 const WAIT_BUDGET_MS = 90_000;
+
+/**
+ * How many of the workspace's own profiles one invocation scores.
+ *
+ * Every own read is another Apify run, and the account's monthly allowance is
+ * shared with competitor scanning. Two per pull keeps the pass cheap while still
+ * working through a workspace's handles over a few pulls — the least recently
+ * scored platforms go first.
+ */
+const MAX_OWN_TARGETS = 2;
+
+/**
+ * How long an own profile is left alone after it is read. Deliberately not tied
+ * to a competitor's cadence: a pull forces the competitor scan (`force: true`),
+ * and honouring that here would re-buy every own read on every pull.
+ */
+const OWN_CADENCE_HOURS = 20;
+
+/**
+ * How long a profile we could not read is left alone before it is tried again.
+ *
+ * Shorter than the cadence on purpose. A refusal costs nothing — the run is
+ * rejected before it starts — so a transient one should recover the same day.
+ * What matters is that a *permanent* refusal (a platform whose actor demands a
+ * larger minimum charge than the workspace allows) stops being retried first on
+ * every pull and holding one of the `MAX_OWN_TARGETS` slots, which would starve
+ * the profiles that can actually be read.
+ */
+const OWN_ERROR_RETRY_HOURS = 6;
+
+/** How long the own pass waits for one run before the next scan collects it. */
+const OWN_WAIT_SECONDS = 45;
 
 /** How long a cadence keeps a target "not due yet". */
 const CADENCE_HOURS: Record<string, number> = {
@@ -157,7 +214,7 @@ Deno.serve(async (req) => {
 
     const { data: business, error: businessError } = await db
       .from("businesses")
-      .select("id")
+      .select("id, social_handles")
       .eq("id", businessId)
       .single();
     if (businessError || !business) throw new HttpError(404, "Business not found.");
@@ -364,6 +421,14 @@ Deno.serve(async (req) => {
 
     const scanned = started.length;
 
+    /* ------------------------------------- score the workspace's own handles */
+    // The Social & reviews page promises that "the next scan will score" the
+    // workspace's own handles, and until this pass existed nothing wrote
+    // `social_scores` — so the panel showed its empty state however many handles
+    // were declared. It runs after the competitor reads because it compares each
+    // own profile against the best rival we just measured.
+    const own = await scoreOwnHandles(maxItems, configuredCharge, competitors);
+
     await db.from("scan_runs").insert({
       business_id: businessId,
       source_type: "social",
@@ -375,7 +440,10 @@ Deno.serve(async (req) => {
       changes_found: posts,
       // The reason, not just the fact: the health panel shows this text, and a
       // null error leaves it guessing ("the provider did not return a result").
-      error: errors.length ? errors.slice(0, 3).join(" · ").slice(0, 500) : null,
+      error:
+        errors.length || own.errors.length
+          ? [...errors, ...own.errors].slice(0, 3).join(" · ").slice(0, 500)
+          : null,
       started_at: startedAt,
       finished_at: new Date().toISOString(),
     });
@@ -386,12 +454,18 @@ Deno.serve(async (req) => {
       scanned,
       posts,
       running,
+      /** Own profiles this run scored into `social_scores`. */
+      scored: own.scored,
+      /** Own profiles whose run is still working; the next scan collects them. */
+      ownRunning: own.running,
       /** True when the per-scan target limit, not the cadence, cut the list short. */
       capped: due.length > selected.length,
       /** True when the monthly allowance lowered the per-run spend ceiling. */
       spendLimited: maxChargeUsd < configuredCharge,
       skipped,
       errors,
+      /** Non-fatal reasons the own pass could not score a profile, named per handle. */
+      ownErrors: own.errors,
     });
   } catch (error) {
     return failure(error);
@@ -540,5 +614,259 @@ Deno.serve(async (req) => {
       { onConflict: "business_id,competitor_id,platform" },
     );
     if (upsertError) throw new HttpError(500, upsertError.message);
+  }
+
+  /**
+   * Scores the workspace's **own** social profiles into `social_scores`.
+   *
+   * The page's empty state has always said "add your handles and the next scan
+   * will score them", but no scan did. The handles live in
+   * `businesses.social_handles` (a platform → handle map); each one we have an
+   * actor for is read, compared with the best rival measured on the same
+   * platform, and stored. Bounded two ways: at most `MAX_OWN_TARGETS` profiles
+   * per invocation, and each not re-read more than once per
+   * `OWN_CADENCE_HOURS`, so this cannot turn one pull into seven billed runs.
+   *
+   * A run that outlives its wait is kept on `social_monitor_targets` (with a null
+   * `competitor_id`) and collected on the next scan, exactly as a competitor's is.
+   */
+  async function scoreOwnHandles(
+    maxItems: number,
+    configuredCharge: number,
+    competitorRows: CompetitorRow[],
+  ): Promise<{ scored: number; running: number; errors: string[] }> {
+    const { data: businessRow } = await db
+      .from("businesses")
+      .select("social_handles")
+      .eq("id", businessId)
+      .single();
+    const handles = (businessRow?.social_handles ?? {}) as Record<string, string>;
+
+    // One handle per platform: a user who added both "X" and "Twitter" entries
+    // gets one read, not two for the same profile.
+    const ownByPlatform = new Map<SocialPlatform, string>();
+    for (const [label, raw] of Object.entries(handles)) {
+      const platform = platformOf(label);
+      if (!platform || !actorFor(platform) || ownByPlatform.has(platform)) continue;
+      const handle = String(raw ?? "").trim();
+      if (handle) ownByPlatform.set(platform, handle);
+    }
+    if (!ownByPlatform.size) return { scored: 0, running: 0, errors: [] };
+
+    const { data: stateRows } = await db
+      .from("social_monitor_targets")
+      .select("id, platform, last_scraped_at, last_run_id, last_run_status, last_error, updated_at")
+      .eq("business_id", businessId)
+      .is("competitor_id", null);
+    const stateByPlatform = new Map<SocialPlatform, OwnTargetState>();
+    for (const row of (stateRows ?? []) as OwnTargetState[]) {
+      const platform = platformOf(String(row.platform ?? ""));
+      if (platform) stateByPlatform.set(platform, row);
+    }
+
+    const { data: scoreRows } = await db
+      .from("social_scores")
+      .select("id, platform, followers")
+      .eq("business_id", businessId);
+    const existingScores = (scoreRows ?? []) as {
+      id: string;
+      platform: string;
+      followers: number;
+    }[];
+
+    // The rival each own profile is set against, from reads already on file.
+    const names = new Map(competitorRows.map((row) => [row.id, row.name]));
+    const { data: benchSocial } = await db
+      .from("competitor_social")
+      .select("competitor_id, platform, followers")
+      .eq("business_id", businessId);
+    const { data: benchPosts } = await db
+      .from("social_posts")
+      .select("competitor_id, platform, likes, comments, engagement_rate")
+      .eq("business_id", businessId)
+      .limit(2000);
+    const benchmarks = bestBenchmarkByPlatform(
+      (benchSocial ?? []) as CompetitorSocialRow[],
+      (benchPosts ?? []) as CompetitorPostRow[],
+      names,
+    );
+
+    const now = Date.now();
+    const due = [...ownByPlatform.entries()]
+      .map(([platform, handle]) => ({ platform, handle, state: stateByPlatform.get(platform) }))
+      .filter(({ state }) => {
+        // A run we have not collected yet is always worth collecting, however
+        // recently the profile was scored — its money is already spent.
+        if (state?.last_run_id && !isTerminal(state.last_run_status)) return true;
+        // A failed read leaves `last_scraped_at` untouched, so for one of those
+        // the last attempt is the row's `updated_at`, which the table's trigger
+        // bumps on every write. Falling back to it is what gives a refused
+        // profile a cadence clock instead of an infinite "due now".
+        const attemptedAt = state?.last_scraped_at ?? state?.updated_at ?? null;
+        if (!attemptedAt) return true;
+        const hours = (now - new Date(attemptedAt).getTime()) / 3_600_000;
+        if (!Number.isFinite(hours)) return true;
+        return hours >= (state?.last_error ? OWN_ERROR_RETRY_HOURS : OWN_CADENCE_HOURS);
+      })
+      .sort(
+        (a, b) =>
+          (a.state?.last_scraped_at ? Date.parse(a.state.last_scraped_at) : 0) -
+          (b.state?.last_scraped_at ? Date.parse(b.state.last_scraped_at) : 0),
+      )
+      .slice(0, MAX_OWN_TARGETS);
+
+    if (!due.length) return { scored: 0, running: 0, errors: [] };
+
+    const spend = await readSpend(db, businessId, "apify");
+    if (spend.remainingUsd < MIN_CHARGE_USD) {
+      // Not an error worth surfacing: the competitor pass already reports the
+      // budget refusal, and leaving own scores for a later scan loses nothing.
+      return { scored: 0, running: 0, errors: [] };
+    }
+    const ownCharge = Number(Math.min(configuredCharge, spend.remainingUsd).toFixed(4));
+
+    const errors: string[] = [];
+    let scored = 0;
+    let running = 0;
+
+    for (const target of due) {
+      // Declared outside the try so the catch can persist a run we did start:
+      // its id must survive, or the next scan has no way to collect it.
+      let run: ApifyRun | null = null;
+      try {
+        if (target.state?.last_run_id && !isTerminal(target.state.last_run_status)) {
+          run = await waitForRun(target.state.last_run_id, 0);
+        }
+        if (!run) {
+          run = await startRun(
+            actorFor(target.platform),
+            inputFor(target.platform, target.handle, maxItems, "1 month"),
+            {
+              maxItems,
+              maxTotalChargeUsd: ownCharge,
+              timeoutSecs: clampInt(getEnv("APIFY_RUN_TIMEOUT_SECS"), 30, 3600, 300),
+            },
+          );
+        }
+        if (!isTerminal(run.status)) run = await waitForRun(run.id, OWN_WAIT_SECONDS);
+        if (!isTerminal(run.status)) {
+          running += 1;
+          await saveOwnState(target, run, "");
+          continue;
+        }
+
+        if (run.status !== "SUCCEEDED" || !run.defaultDatasetId) {
+          const detail = run.statusMessage ?? run.status;
+          await saveOwnState(target, run, detail);
+          await recordUsage(db, {
+            businessId,
+            provider: "apify",
+            endpoint: "actors",
+            units: 0,
+            costUsd: run.usageTotalUsd,
+            status: "error",
+            detail: `own ${target.platform} ${target.handle}: ${detail}`.slice(0, 300),
+          });
+          errors.push(`own ${target.platform} ${target.handle}: ${detail}`);
+          continue;
+        }
+
+        const items = await fetchDatasetItems(run.defaultDatasetId, maxItems);
+        const followers = followersFrom(items);
+        const posts = normalisePosts(items, target.platform);
+        await saveOwnState(target, run, "");
+
+        await recordUsage(db, {
+          businessId,
+          provider: "apify",
+          endpoint: "actors",
+          units: posts.length,
+          costUsd: run.usageTotalUsd,
+          detail: `own ${target.platform} ${target.handle}: ${posts.length} posts`,
+        });
+
+        // A dataset that never states a follower count is unknown, not zero. A
+        // score built on a stand-in zero would read as "you have no audience"
+        // and overwrite a figure the previous scan measured.
+        if (followers === null) {
+          errors.push(
+            `own ${target.platform} ${target.handle}: the scrape did not report a follower count`,
+          );
+          continue;
+        }
+
+        const engagement = posts.length
+          ? posts.reduce(
+              (sum, post) => sum + engagementRate(post.likes, post.comments, followers),
+              0,
+            ) / posts.length
+          : 0;
+
+        const previous = existingScores.find(
+          (row) => platformOf(String(row.platform ?? "")) === target.platform,
+        );
+        const score = scoreOwnProfile(
+          { platform: target.platform, handle: target.handle, followers, engagement },
+          benchmarks.get(target.platform) ?? null,
+          Number(previous?.followers ?? 0),
+        );
+        const payload = {
+          business_id: businessId,
+          platform: score.platform,
+          handle: score.handle,
+          score: score.score,
+          followers: score.followers,
+          growth: score.growth,
+          benchmark_gap: score.benchmarkGap,
+          focus: score.focus,
+          reason: score.reason,
+        };
+        const write = previous
+          ? await db.from("social_scores").update(payload).eq("id", previous.id)
+          : await db.from("social_scores").insert(payload);
+        if (write.error) throw new HttpError(500, write.error.message);
+        scored += 1;
+      } catch (cause) {
+        const message = cause instanceof Error ? cause.message : "The own-profile read failed.";
+        errors.push(`own ${target.platform} ${target.handle}: ${message}`);
+        // Persist the failure, so it starts the retry clock above. A refused run
+        // never reaches the success path, and an unrecorded refusal is exactly
+        // what lets one unscorable platform eat a slot on every single scan.
+        try {
+          await saveOwnState(target, run, message);
+        } catch {
+          // The read error is the one worth reporting; a state write that also
+          // fails must not be allowed to hide it.
+        }
+      }
+    }
+
+    return { scored, running, errors };
+  }
+
+  /** Stores one own profile's scrape state, updating the row when one exists. */
+  async function saveOwnState(
+    target: { platform: SocialPlatform; handle: string; state?: OwnTargetState },
+    run: ApifyRun | null,
+    error: string,
+  ): Promise<void> {
+    const finished = run !== null && isTerminal(run.status);
+    const row = {
+      business_id: businessId,
+      competitor_id: null,
+      platform: target.platform,
+      handle: target.handle,
+      actor_id: actorFor(target.platform),
+      last_scraped_at: finished
+        ? new Date().toISOString()
+        : (target.state?.last_scraped_at ?? null),
+      last_run_id: run?.id ?? target.state?.last_run_id ?? "",
+      last_run_status: run?.status ?? target.state?.last_run_status ?? "",
+      last_error: error,
+    };
+    const write = target.state?.id
+      ? await db.from("social_monitor_targets").update(row).eq("id", target.state.id)
+      : await db.from("social_monitor_targets").insert(row);
+    if (write.error) throw new HttpError(500, write.error.message);
   }
 });
