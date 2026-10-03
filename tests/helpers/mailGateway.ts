@@ -22,17 +22,19 @@ export interface FakeDb {
   clients: Row[];
   mail_accounts: Row[];
   sent_messages: Row[];
+  /** Google Business Profile grants, read and written by the reply gateway. */
+  google_profile_connections: Row[];
 }
 
 export function emptyDb(): FakeDb {
-  return { businesses: [], clients: [], mail_accounts: [], sent_messages: [] };
+  return { businesses: [], clients: [], mail_accounts: [], sent_messages: [], google_profile_connections: [] };
 }
 
 type Filter = (row: Row) => boolean;
 
 class FakeQuery {
   private filters: Filter[] = [];
-  private action: "select" | "insert" | "update" = "select";
+  private action: "select" | "insert" | "update" | "delete" = "select";
   private payload: Row | Row[] | null = null;
   private ordered: { column: string; ascending: boolean } | null = null;
   private limitN: number | null = null;
@@ -56,6 +58,12 @@ class FakeQuery {
   update(row: Row): this {
     this.action = "update";
     this.payload = row;
+    return this;
+  }
+
+  /** `delete().eq()` — how the Google connection is dropped. */
+  delete(): this {
+    this.action = "delete";
     return this;
   }
 
@@ -123,6 +131,12 @@ class FakeQuery {
 
     if (this.action === "update") {
       for (const row of this.rows()) Object.assign(row, this.payload);
+      return { data: null, error: null };
+    }
+
+    if (this.action === "delete") {
+      const doomed = new Set(this.rows());
+      store[this.table] = (store[this.table] ?? []).filter((row) => !doomed.has(row));
       return { data: null, error: null };
     }
 

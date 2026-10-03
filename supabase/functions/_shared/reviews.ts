@@ -8,6 +8,14 @@ import {
 import { getEnv, hasEnv, requireEnv } from "./env.ts";
 import { HttpError } from "./errors.ts";
 import { localResultsOf, serpApi, type SerpApiResponse } from "./serpapi.ts";
+import {
+  connectConfigured,
+  GoogleAuthError,
+  postGoogleReply,
+  refreshAccessToken,
+  resolveReviewName,
+} from "./googleBusiness.ts";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 /**
  * Review reading and replying, without a dedicated review-monitoring vendor.
@@ -793,31 +801,164 @@ export function reviewInputFor(
 export interface ReplyResult {
   replyId: string;
   repliedAt: string;
+  /**
+   * Google's own resource name for the review the reply landed on
+   * (`accounts/…/locations/…/reviews/…`). The caller stores it on the row, so
+   * the next reply skips the search and cannot land on a different review.
+   */
+  reviewName?: string;
 }
 
-/**
- * The Google Business Profile API is the one compliant reply path, and it is not
- * wired up yet: it needs the tenant's own profile ingested through OAuth (and
- * Google's manual API-access approval) before Google will accept a reply, since
- * it only honours review ids it issued itself. Saying that plainly beats a
- * generic gateway failure.
- */
-export function repliesConfigured(): boolean {
-  return hasEnv("GOOGLE_CLIENT_ID") && hasEnv("GOOGLE_CLIENT_SECRET");
-}
-
-export async function sendReply(_params: {
+/** Everything `sendReply` needs to find the review and post against it. */
+export interface SendReplyParams {
+  businessId: string;
   platform: string;
   reviewExternalId: string;
   handle: string;
   body: string;
-}): Promise<ReplyResult> {
-  throw new HttpError(
-    409,
-    "Sending replies needs your own Google Business Profile connected, which this deployment does not have yet. " +
-      "Reading and replying are separate permissions: Google only accepts replies to reviews it told us about directly. " +
-      "Until that connection is set up, copy the suggested reply across by hand.",
-  );
+  /** The stored row's own review — the material a match is made against. */
+  author?: string;
+  rating?: number;
+  text?: string;
+  /** A Google resource name already resolved for this row, when there is one. */
+  googleReviewName?: string;
+}
+
+/**
+ * The Google Business Profile API is the one compliant reply path, and it
+ * needs two things before it can be used: the deployment's own OAuth client,
+ * and this workspace's profile connected through it — Google only accepts a
+ * reply to a review id it issued itself, against a location it told us about.
+ * Missing either is a 409 that names it, rather than a generic failure.
+ */
+export function repliesConfigured(): boolean {
+  return connectConfigured();
+}
+
+/**
+ * Posts one reply against a review id the platform itself issued.
+ *
+ * For Google that means the workspace's own Business Profile is connected: the
+ * stored refresh token mints an access token, the review is resolved against
+ * Google's list for each connected location — unless this row was already
+ * resolved, which is what `google_review_name` caches — and the reply is PUT
+ * against that resource. Every refusal comes back as a 409 in words the sender
+ * can act on: not connected, needs reconnecting, API access not granted, review
+ * not ours — because "the reply failed" tells them nothing.
+ *
+ * Nothing here decides *whether* to reply; the caller only reaches this once a
+ * person has pressed send.
+ */
+export async function sendReply(
+  db: SupabaseClient,
+  params: SendReplyParams,
+): Promise<ReplyResult> {
+  const platform = params.platform.trim().toLowerCase();
+
+  if (platform !== "google") {
+    throw new HttpError(
+      409,
+      `Replies to ${platformLabelOf(platform)} are not sent from here yet — copy the reply across by hand.`,
+    );
+  }
+
+  if (!connectConfigured()) {
+    throw new HttpError(
+      409,
+      "Sending replies needs GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET on this deployment. Copy the suggested reply across by hand for now.",
+    );
+  }
+
+  const { data, error } = await db
+    .from("google_profile_connections")
+    .select("id, status, refresh_token, location_names, last_error")
+    .eq("business_id", params.businessId)
+    .maybeSingle();
+  if (error) throw new HttpError(500, error.message);
+
+  const connection = (data ?? null) as {
+    id: string;
+    status: string;
+    refresh_token: string;
+    location_names: unknown;
+    last_error: string;
+  } | null;
+
+  if (!connection) {
+    throw new HttpError(
+      409,
+      "Connect your Google Business Profile first — the Connect button on Social & reviews. Reading and replying are separate permissions: Google only accepts a reply against a profile you connected directly, so a scraped review id is refused.",
+    );
+  }
+  if (connection.status !== "connected") {
+    throw new HttpError(
+      409,
+      "This Google connection has expired — reconnect your Google Business Profile, then send the reply.",
+    );
+  }
+
+  let access: string;
+  try {
+    access = await refreshAccessToken(connection.refresh_token);
+  } catch (cause) {
+    if (cause instanceof GoogleAuthError) {
+      // The grant is dead, not the call: mark it so the button says reconnect
+      // instead of failing the same way on every send.
+      await db
+        .from("google_profile_connections")
+        .update({ status: "needs_reauth", last_error: cause.message.slice(0, 300) })
+        .eq("id", connection.id);
+      throw new HttpError(
+        409,
+        "Google will not accept this connection again — reconnect your Google Business Profile, then send the reply.",
+      );
+    }
+    throw cause;
+  }
+
+  // A cached name is trusted outright: it is what Google's own reply landed on,
+  // so a resend cannot drift onto a different review. Otherwise the row is
+  // matched against each connected location in turn.
+  let reviewName = (params.googleReviewName ?? "").trim();
+  if (!reviewName) {
+    reviewName = await resolveReviewName(access, locationNamesOf(connection.location_names), {
+      author: params.author,
+      rating: params.rating,
+      text: params.text,
+    });
+    if (!reviewName) {
+      throw new HttpError(
+        409,
+        "Google does not list a review matching this one on the connected location — check which location is connected, or copy the reply across by hand. Nothing was posted.",
+      );
+    }
+  }
+
+  const repliedAt = await postGoogleReply(access, reviewName, params.body);
+
+  // A connection that was flagged mid-flight has proved itself again.
+  if (connection.status !== "connected") {
+    await db
+      .from("google_profile_connections")
+      .update({ status: "connected", last_error: "" })
+      .eq("id", connection.id);
+  }
+
+  return { replyId: `${reviewName}/reply`, repliedAt, reviewName };
+}
+
+/** jsonb arrives parsed or as text depending on the client; either is a list. */
+function locationNamesOf(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw.map(String).filter(Boolean);
+  if (typeof raw === "string" && raw.trim().startsWith("[")) {
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+    } catch {
+      // Not a list after all — treated as "no locations" below.
+    }
+  }
+  return [];
 }
 
 /* ----------------------------------------------------------- derivation */

@@ -14,6 +14,7 @@ import type {
   CompetitorReviewGap,
   CompetitorSocialInput,
   GeoRankRow,
+  GoogleProfile,
   InventoryItem,
   IntegrationConnection,
   IntegrationProvider,
@@ -281,6 +282,7 @@ export async function loadWorkspace(profile: BusinessProfile): Promise<Workspace
     reviewConnectionsRes,
     socialAccountsRes,
     publishJobsRes,
+    googleProfileRes,
   ] = await Promise.all([
     db.from("competitors").select("*").eq("business_id", id).order("monthly_visits", { ascending: false }),
     db.from("competitor_metrics").select("*").eq("business_id", id),
@@ -320,6 +322,12 @@ export async function loadWorkspace(profile: BusinessProfile): Promise<Workspace
     db.from("review_connections").select("*").eq("business_id", id).order("created_at", { ascending: true }),
     db.from("social_accounts").select("*").eq("business_id", id).order("platform"),
     db.from("social_publish_jobs").select("*").eq("business_id", id).order("created_at", { ascending: false }).limit(100),
+    // Columns by name: the grant itself (`refresh_token`) must not leave the server.
+    db
+      .from("google_profile_connections")
+      .select("status, display_name, account_name, location_names, connected_at, last_error")
+      .eq("business_id", id)
+      .maybeSingle(),
   ]);
 
   const competitorRows = rows<Row>(competitorsRes);
@@ -355,6 +363,21 @@ export async function loadWorkspace(profile: BusinessProfile): Promise<Workspace
     .sort((a, b) => (b.postedAt ?? b.scrapedAt).localeCompare(a.postedAt ?? a.scrapedAt));
   const socialMonitorTargets = rows<Row>(socialTargetsRes).map(mapSocialMonitorTarget);
   const reviewConnections = rows<Row>(reviewConnectionsRes).map(mapReviewConnection);
+  // Read for status only — `refresh_token` is deliberately not selected, so the
+  // grant the reply path holds never reaches the browser.
+  const googleRow = (googleProfileRes.data ?? null) as Row | null;
+  const googleProfile: GoogleProfile | null = googleRow
+    ? {
+        status: (googleRow.status === "needs_reauth" ? "needs_reauth" : "connected") as GoogleProfile["status"],
+        displayName: str(googleRow.display_name),
+        accountName: str(googleRow.account_name),
+        locations: Array.isArray(googleRow.location_names)
+          ? (googleRow.location_names as unknown[]).map(String).filter(Boolean)
+          : [],
+        connectedAt: str(googleRow.connected_at, ""),
+        lastError: str(googleRow.last_error),
+      }
+    : null;
   const socialAccounts = rows<Row>(socialAccountsRes).map(mapSocialAccount);
   const publishJobs = rows<Row>(publishJobsRes).map(mapSocialPublishJob);
   // Which providers the server actually holds credentials for. Best effort — an
@@ -640,6 +663,7 @@ export async function loadWorkspace(profile: BusinessProfile): Promise<Workspace
     reviewSources,
     latestReviewScan,
     reviewConnections,
+    googleProfile,
     socialAccounts,
     publishJobs,
     adAssets: rows<Row>(adAssetsRes).map<AdAsset>((a) => ({

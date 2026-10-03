@@ -733,6 +733,26 @@ export interface ReviewScan {
   items: MyReview[];
 }
 
+/**
+ * The workspace's own Google Business Profile, connected through OAuth so a
+ * reply can be posted against a review Google issued itself — reading a review
+ * and answering it are separate permissions, and a scraped id cannot be
+ * replied to.
+ *
+ * Holds no secret: the refresh token stays on the server, and this is only what
+ * the button on Social & reviews shows.
+ */
+export interface GoogleProfile {
+  status: "connected" | "needs_reauth";
+  displayName: string;
+  accountName: string;
+  /** Every location the grant can see — a reply walks them in order. */
+  locations: string[];
+  connectedAt: string;
+  /** Why the grant needs renewing, empty while it is healthy. */
+  lastError: string;
+}
+
 export interface ScanRun {
   id: string;
   sourceType: "competitor" | "reviews" | "seo" | "geo" | "social";
@@ -969,6 +989,8 @@ export interface WorkspaceData {
   competitorReviewGaps: CompetitorReviewGap[];
   /** Review profiles the workspace monitors. */
   reviewConnections: ReviewConnection[];
+  /** The workspace's own Google Business Profile, for sending review replies. */
+  googleProfile: GoogleProfile | null;
   /** Recent public posts pulled from each competitor's social profiles. */
   socialPosts: SocialPost[];
   /** Scrape state per monitored competitor handle. */

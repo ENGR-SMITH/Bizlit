@@ -110,6 +110,10 @@ export function sampleWorkspace(profile: BusinessProfile = sampleProfile): Works
     weeklyReports,
     reviewSources,
     reviewConnections,
+    // No OAuth grant was ever made for the sample workspace, so replies from it
+    // stop at the connect button — the same honest "not configured" the other
+    // integrations show rather than a connection that could never answer.
+    googleProfile: null,
     latestReviewScan: {
       scannedAt: latestReviewScan.scannedAt,
       nextScanAt: daysAhead(1),

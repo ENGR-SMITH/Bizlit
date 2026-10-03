@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Check,
   Copy,
@@ -72,6 +72,8 @@ export function SocialPage() {
 
   const { reviewSources, reviewConnections, latestReviewScan, socialScores, competitors, profile } =
     workspace;
+  /** The workspace's own Google profile — what makes Send work for a Google review. */
+  const googleProfile = workspace.googleProfile;
   const socialPosts = workspace.socialPosts;
   const [tab, setTab] = useState<SocialTab>("reviews");
   const [replyTarget, setReplyTarget] = useState<MyReview | null>(null);
@@ -91,6 +93,58 @@ export function SocialPage() {
   const [handlePlatform, setHandlePlatform] = useState("");
   const [handleValue, setHandleValue] = useState("");
   const toast = useToast();
+
+  /**
+   * The OAuth leg lands back on this page with `?gbp=…`, so say what actually
+   * happened once and take the parameter back out of the address bar — a
+   * refresh must not repeat the toast.
+   */
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const result = params.get("gbp");
+    if (!result) return;
+    params.delete("gbp");
+    const query = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    );
+
+    if (result === "connected") {
+      toast("Google Business Profile connected — replies to Google reviews can now be sent from here.");
+    } else if (result === "declined") {
+      toast("Google connection declined — no profile was connected.");
+    } else if (result === "no-location") {
+      toast("That Google account manages no Business Profile locations, so there is nothing to reply to.");
+    } else {
+      toast(`The Google connection did not complete (${result}). Try again from this page.`);
+    }
+  }, [toast]);
+
+  /** Sends the browser to Google's consent screen, signed for this workspace. */
+  async function connectGoogle() {
+    try {
+      const started = await actions.startGoogleProfileConnect();
+      if (started?.authUrl) {
+        window.location.assign(started.authUrl);
+        return;
+      }
+      toast("Connecting needs a live workspace — the sample has no Google account to link.");
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : "The Google connection could not be started.");
+    }
+  }
+
+  /** Forgets the grant, so replies fall back to copy-and-paste. */
+  async function disconnectGoogle() {
+    try {
+      await actions.disconnectGoogleProfile();
+      toast("Google Business Profile disconnected — replies fall back to copy-and-paste.");
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : "That connection could not be removed.");
+    }
+  }
 
   // Sorted so the list does not reshuffle as a map is rebuilt on every save.
   const handleEntries = Object.entries(profile.socialHandles).sort(([a], [b]) =>
@@ -503,6 +557,45 @@ export function SocialPage() {
                   ))}
                 </ul>
               )}
+
+              {/* Google's own profile, which is what makes Send work: reading a
+                  review and answering it are separate permissions, and Google
+                  refuses a scraped id — only a profile the workspace connected
+                  itself can be replied against. */}
+              <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-slate-800">
+                      Google Business Profile
+                      {googleProfile ? (
+                        <Badge tone={googleProfile.status === "connected" ? "good" : "warn"}>
+                          {googleProfile.status === "connected" ? "Connected" : "Reconnect"}
+                        </Badge>
+                      ) : null}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-slate-500">
+                      {googleProfile
+                        ? googleProfile.status === "connected"
+                          ? `${googleProfile.displayName || googleProfile.accountName || "Connected"} · ${googleProfile.locations.length} location${googleProfile.locations.length === 1 ? "" : "s"} — replies to Google reviews post from here`
+                          : "Google will not accept the saved grant — reconnect to send replies."
+                        : "Google only accepts a reply against a profile you connected yourself — this is what makes Send work."}
+                    </p>
+                  </div>
+                  {googleProfile ? (
+                    <button
+                      type="button"
+                      className={btnGhost}
+                      onClick={() => void disconnectGoogle()}
+                    >
+                      Disconnect
+                    </button>
+                  ) : (
+                    <button type="button" className={btnGhost} onClick={() => void connectGoogle()}>
+                      Link Google
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           </Card>
         </div>
@@ -813,6 +906,13 @@ export function SocialPage() {
             {sendError ? (
               <div className="space-y-2 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
                 <p>{sendError}</p>
+                {/* The one refusal a person can act on from here: the connection
+                    Send is asking for, started where it was asked for. */}
+                {!googleProfile && sendError.includes("Connect your Google Business Profile") ? (
+                  <button type="button" className={btnGhost} onClick={() => void connectGoogle()}>
+                    <Link2 size={13} /> Connect Google Business Profile
+                  </button>
+                ) : null}
                 {/* The fallback for a platform this deployment cannot post to:
                     copy the reply across, then record it here by hand. */}
                 <button type="button" className={btnGhost} onClick={() => void markReplied()}>

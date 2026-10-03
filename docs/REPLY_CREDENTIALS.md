@@ -1,8 +1,8 @@
 # Reply credentials — what the Review reply composer needs
 
 How to get every credential behind **Social & reviews → a review → Reply**, which
-button each one unlocks, and — read Part 3 first if you only read one part — the
-one that *cannot* be unlocked with a key alone yet.
+button each one unlocks, and — read Part 3 first if you only read one part — how
+Send reply actually posts to Google once a Business Profile is connected.
 
 State below verified against the live project `xjftzfixjklgsowlcrzl` on
 2 October 2026.
@@ -14,7 +14,7 @@ State below verified against the live project `xjftzfixjklgsowlcrzl` on
 | **Draft with AI** | `ai-draft` (v9, live) | `GROQ_API_KEY` | ✅ already set |
 | **Copy** | none | — | ✅ works |
 | **I posted it myself — mark as replied** | local record | Clerk sign-in only | ✅ works |
-| **Send reply** | `review-reply` (v15, live) | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` | ✅ set 2 Oct 2026 — gate passes, but see Part 3 |
+| **Send reply** | `review-reply` (live) | `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET` + a connected Google Business Profile | ✅ Phase B live — see Part 3 |
 
 ---
 
@@ -52,6 +52,9 @@ export function repliesConfigured(): boolean {
 > `/functions/v1/review-reply` now answers **`401 Missing bearer token`** where
 > it used to answer **`409 … (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)`**. No
 > redeploy is involved — secrets are read per call.
+>
+> Part 3 covers the rest of the chain: those two values let the function run,
+> but the reply only lands after a tenant connects its own Business Profile.
 
 1. **Create a project** — <console.cloud.google.com> → project dropdown →
    **New Project** → e.g. *BIZLIT replies*.
@@ -66,10 +69,15 @@ export function repliesConfigured(): boolean {
    the Google account that manages the Business Profile (test-only apps reject
    everyone else).
 4. **Create the client** — *APIs & Services → Credentials → Create
-   credentials → OAuth client ID* → **Web application** → add an Authorized
-   redirect URI (`http://localhost:5173/oauth/google` stands in until the
-   connect flow exists) → **Create** → copy the **Client ID** and **Client
-   secret**.
+   credentials → OAuth client ID* → **Web application** → add **both**
+   Authorized redirect URIs → **Create** → copy the **Client ID** and **Client
+   secret**:
+   - `https://xjftzfixjklgsowlcrzl.supabase.co/functions/v1/google-connect`
+     — the live connect callback (the one Google actually redirects to);
+   - `http://localhost:5173/oauth/google` — local development stand-in.
+
+   > If this URI is missing from the client, Google refuses the consent step
+   > with *redirect_uri_mismatch* and the connect flow never starts.
 5. **Set them** (repo root; secrets need no redeploy):
    ```bash
    set -a && . ./.env.local && set +a
@@ -81,50 +89,50 @@ export function repliesConfigured(): boolean {
 
 ---
 
-## Part 3 — Why Send still will not post after Part 2
+## Part 3 — How Send reply posts now (Phase B, live)
 
-**No credential makes Send work today**, and it is not a missing key: the
-posting call itself is a deliberate stub in
-`supabase/functions/_shared/reviews.ts`.
+Send reply is **no longer a stub**. As of 2 October 2026 the flow is real:
 
-```ts
-export async function sendReply(_params: {
-  platform: string;
-  reviewExternalId: string;
-  handle: string;
-  body: string;
-}): Promise<ReplyResult> {
-  throw new HttpError(
-    409,
-    "Sending replies needs your own Google Business Profile connected, which this deployment does not have yet. …",
-  );
-}
-```
+1. **Connect** — *Review profiles → Google Business Profile → Link Google*
+   invokes the `google-connect` function (live), which redirects to Google's
+   consent screen with `access_type=offline&prompt=consent` and the scope
+   `business.manage`. Google returns to
+   `https://xjftzfixjklgsowlcrzl.supabase.co/functions/v1/google-connect`,
+   which exchanges the code, discovers every account and location the grant can
+   see (max 5 accounts / 100 locations), and stores the **refresh token** plus
+   the location names in `google_profile_connections` (migration
+   `0028_google_profile_replies.sql`, applied 2 Oct 2026 — RLS on, only the
+   owning business can read it).
+2. **Resolve at reply time** — when you press **Send reply**, `review-reply`
+   reads the row (including any cached `google_review_name`), refreshes the
+   access token, lists Google's *own* reviews for the connected location(s) and
+   matches the scraped row to a Google review by id / rating / text overlap.
+   Anonymous reviewers (no display name) match on rating + text overlap only.
+   No confident match → **409 "…does not list a review matching…"** rather than
+   a guess.
+3. **Post** — `PUT mybusiness.googleapis.com/v4/accounts/*/locations/*/reviews/*/reply`
+   with `{comment}`. The resolved Google review name is cached on the row so
+   the next send skips discovery.
 
-So the credentials only choose *which* of these two messages you see — and this
-deployment is already on the second:
+What still surfaces as a 409 (each with the server's own words in the
+composer):
 
-1. Without the two values → *"…it needs your own Google Business Profile
-   connected (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET). Copy the suggested reply
-   across by hand for now."* ← what you saw before 2 Oct 2026
-2. With them (current) → *"…Reading and replying are separate permissions: Google
-   only accepts replies to reviews it told us about directly… Until that
-   connection is set up, copy the suggested reply across by hand."*
+| Situation | Message |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` missing | names the two env vars |
+| No `google_profile_connections` row | *Connect your Google Business Profile first* — the composer shows a **Connect Google Business Profile** button in this case |
+| Row `status = needs_reauth` | connection expired — reconnect |
+| Refresh token rejected (`invalid_grant`) | marks the row `needs_reauth`, asks you to reconnect |
+| No confident match in Google's list | does not list a review matching this one |
+| Google refuses the reply (400/403/404) | quotes Google's reason — 403 usually means the API-interest form has not been approved yet |
+| Non-Google platform (Trustpilot, Yelp, …) | copy across by hand |
 
-The reason is structural. Reviews are read through **SerpApi / Apify**, i.e.
-scraped — Google only accepts a reply against a review id **it** minted, so a
-scraped id is rejected. Closing the gap is **Phase B**:
+A *403 API access not granted* from Google is the one credential-shaped
+failure: the Business Profile API is gated, so file Google's API-interest form
+(step 2 in Part 2) and wait for approval.
 
-- connect the tenant's own Google Business Profile through OAuth and store the
-  refresh token per workspace;
-- ingest that profile's reviews from `mybusiness.googleapis.com` so the ids in
-  `my_reviews.external_id` are Google's own;
-- post `accounts/{account}/locations/{location}/reviews/{review}/reply`.
-
-Until then the compliant path is the manual one, which needs no credentials at
-all: **Copy** → paste it on the platform → **I posted it myself — mark as
-replied**, which records `replied`, the reply text and the timestamp against the
-row.
+The manual path needs no credentials at all and remains available:
+**Copy** → paste it on the platform → **I posted it myself — mark as replied**.
 
 ---
 
@@ -148,7 +156,13 @@ Open **Social & reviews → a review → Reply**:
 - **Draft with AI** returns a draft within a couple of seconds (a 409 here means
   `GROQ_API_KEY` is missing).
 - **Send reply** always shows the server's own words in the composer — never a
-  silent failure. Part 3's message is the expected answer until Phase B exists.
+  silent failure. With no profile connected, Part 3's *Connect your Google
+  Business Profile first* is expected (and comes with a one-click connect
+  button). With one connected, the reply lands on Google and the row flips to
+  *replied*.
+- **Google Business Profile panel** (Review profiles card) shows the connection
+  badge, account and location count; `?gbp=` results from the OAuth round trip
+  arrive as toasts.
 - **I posted it myself** marks the review replied without any provider call.
 
 Reading reviews in the first place is separate: `SERPAPI_KEY` and `APIFY_TOKEN`

@@ -15,11 +15,13 @@ import { platformLabelOf, repliesConfigured, sendReply } from "../_shared/review
  * here auto-replies, which is the guardrail from the blueprint (no unreviewed
  * AI text reaching the public).
  *
- * Replying needs a platform business API, and the only compliant one for Google
- * is not connected on this deployment yet — see `_shared/reviews.ts` for why a
- * scraped review id cannot be replied to. Until it is, this refuses with an
- * explanation instead of a generic failure; the composer keeps working so the
- * suggested reply can still be copied across by hand.
+ * Replying needs a platform business API, and for Google that is the workspace's
+ * own Business Profile connected through OAuth: Google only honours a review id
+ * it issued itself, so a scraped id cannot be replied to. `_shared/reviews.ts`
+ * resolves the stored row against Google's own list and posts against that, and
+ * refuses with the reason (not connected, needs reconnecting, API access not
+ * granted, review not ours) when it cannot. The composer keeps working either
+ * way — copy-and-paste and "I posted it myself" are the fallback paths.
  *
  * The idempotency key is derived from the review, so a retried submit returns the
  * first result instead of posting a second reply.
@@ -42,6 +44,12 @@ interface ReviewRow {
   external_id: string | null;
   platform: string | null;
   source: string | null;
+  /** The stored review itself — what a match against Google's list is made on. */
+  author: string | null;
+  rating: number | null;
+  body: string | null;
+  /** Google's resource name once this row has been resolved, so a resend skips the search. */
+  google_review_name: string | null;
   replied: boolean;
   reply_text: string | null;
   replied_at: string | null;
@@ -83,7 +91,9 @@ Deno.serve(async (req) => {
       async () => {
         const { data: review, error } = await db
           .from("my_reviews")
-          .select("id, external_id, platform, source, replied, reply_text, replied_at")
+          .select(
+            "id, external_id, platform, source, author, rating, body, google_review_name, replied, reply_text, replied_at",
+          )
           .eq("id", reviewId)
           .eq("business_id", businessId)
           .maybeSingle();
@@ -108,16 +118,28 @@ Deno.serve(async (req) => {
         const handle = await handleForPlatform(db, businessId, row.platform ?? "");
 
         try {
-          const sent = await sendReply({
+          const sent = await sendReply(db, {
+            businessId,
             platform,
             reviewExternalId: row.external_id,
             handle,
             body: reply,
+            author: row.author ?? "",
+            rating: row.rating ?? undefined,
+            text: row.body ?? "",
+            googleReviewName: row.google_review_name ?? "",
           });
 
           const { error: updateError } = await db
             .from("my_reviews")
-            .update({ replied: true, reply_text: reply, replied_at: sent.repliedAt })
+            .update({
+              replied: true,
+              reply_text: reply,
+              replied_at: sent.repliedAt,
+              // Cached only once Google has accepted a reply against it: from
+              // here on the row carries the id Google knows, not the scraped one.
+              google_review_name: sent.reviewName ?? row.google_review_name ?? null,
+            })
             .eq("id", row.id)
             .eq("business_id", businessId);
           if (updateError) throw new HttpError(500, updateError.message);

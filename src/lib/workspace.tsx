@@ -284,6 +284,15 @@ export interface WorkspaceActions {
   /** Sends a reply to one review through the gateway. */
   replyToReview: (reviewId: string, reply: string) => Promise<void>;
   /**
+   * Starts the Google Business Profile OAuth flow that makes sending a reply
+   * possible, resolving with the consent URL to send the browser to — Google
+   * returns to the workspace with the grant, which the app reads back as
+   * status. Null in demo mode, where there is no server to connect.
+   */
+  startGoogleProfileConnect: () => Promise<{ authUrl: string; redirectUri: string } | null>;
+  /** Forgets the stored Google Business Profile grant. */
+  disconnectGoogleProfile: () => Promise<void>;
+  /**
    * Records a reply the user posted on the review platform by hand. Used when the
    * deployment cannot post replies itself, so the draft the app produced still
    * counts as handled instead of the review sitting in "needs a reply" forever.
@@ -710,6 +719,13 @@ function DemoWorkspaceProvider({ children }: { children: ReactNode }) {
             ),
           },
         }));
+      },
+      async startGoogleProfileConnect() {
+        // No server in demo mode, so there is no grant to connect.
+        return null;
+      },
+      async disconnectGoogleProfile() {
+        patchData((current) => ({ ...current, googleProfile: null }));
       },
       async runSerpScan() {
         // No provider credentials in demo mode — the sample scan already stands in,
@@ -1404,6 +1420,24 @@ function LiveWorkspaceProvider({ children }: { children: ReactNode }) {
           setError(cause instanceof Error ? cause.message : "That reply could not be sent.");
           throw cause;
         }
+      },
+      async startGoogleProfileConnect() {
+        if (!dbEnabled || !profile) return null;
+        // The landing page is signed into the OAuth state by the gateway, so the
+        // callback comes back to this workspace instead of a configured URL.
+        return await invokeGateway<{ authUrl: string; redirectUri: string }>("google-connect", {
+          action: "start",
+          businessId: profile.id,
+          returnTo: `${window.location.origin}/#/social`,
+        });
+      },
+      async disconnectGoogleProfile() {
+        if (!dbEnabled || !profile) return;
+        await invokeGateway("google-connect", {
+          action: "disconnect",
+          businessId: profile.id,
+        });
+        patchData((current) => ({ ...current, googleProfile: null }));
       },
       async recordManualReviewReply(reviewId, reply) {
         if (!dbEnabled || !profile) return;

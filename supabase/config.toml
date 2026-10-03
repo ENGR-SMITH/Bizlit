@@ -432,6 +432,13 @@ verify_jwt = false
 [functions.review-reply]
 verify_jwt = false
 
+# Google Business Profile OAuth. The app's own calls are verified by
+# requireCaller, but Google's callback — the leg that carries the code back —
+# is a bare GET with no session, so it is checked by the signed state instead
+# and the platform JWT check must stay off.
+[functions.google-connect]
+verify_jwt = false
+
 # Inbound provider webhook — unauthenticated by Clerk; it verifies the provider's
 # HMAC signature itself before writing anything (see _shared/webhookVerify.ts).
 # The platform JWT check is still off so the provider's POST is not rejected.
