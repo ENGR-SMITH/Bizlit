@@ -30,7 +30,7 @@ export const GBP_SCOPE = "https://www.googleapis.com/auth/business.manage";
 const API = "https://mybusiness.googleapis.com/v4";
 const ACCOUNTS_URL = "https://mybusinessaccountmanagement.googleapis.com/v1/accounts";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
-const AUTHORIZE_URL = "https://accounts.google.com/o.oauth2/v2/auth";
+const AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 
 /** How long an authorisation URL may sit unused before its state is refused. */
 export const STATE_TTL_SECONDS = 600;

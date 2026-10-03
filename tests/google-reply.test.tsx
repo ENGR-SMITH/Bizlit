@@ -178,7 +178,7 @@ describe("the consent URL", () => {
     });
     const url = new URL(authUrl(state));
 
-    expect(url.origin + url.pathname).toBe("https://accounts.google.com/o.oauth2/v2/auth");
+    expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
     expect(url.searchParams.get("client_id")).toBe("client-id.apps.googleusercontent.com");
     expect(url.searchParams.get("redirect_uri")).toBe(
       "https://proj.supabase.co/functions/v1/google-connect",

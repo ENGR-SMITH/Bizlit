@@ -135,7 +135,7 @@ describe("starting a connection", () => {
     };
     const url = new URL(body.authUrl);
 
-    expect(url.origin + url.pathname).toBe("https://accounts.google.com/o.oauth2/v2/auth");
+    expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
     expect(url.searchParams.get("redirect_uri")).toBe(
       "https://proj.supabase.co/functions/v1/google-connect",
     );
