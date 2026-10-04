@@ -229,8 +229,10 @@ function AppWall({ without }: { without: boolean }) {
   return (
     <div className="relative flow-root">
       <div className="od-apps-row">
+        {/* Every tile is a door into the sign-up: the wall is the pitch, and
+            the switch above it is what a visitor reaches for next. */}
         {SOURCES.map((source) => (
-          <a key={source.label} href="#screens" className="od-app-entry">
+          <a key={source.label} href="/sign-up" className="od-app-entry">
             <figure>
               <img
                 width={80}

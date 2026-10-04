@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Menu, Moon, Sun, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { odBtnSm, Container } from "./bits";
+import { ThemeSwitch, useLandingDark } from "./theme";
 
 /*
  * The odoo.com header: a flat white 60px bar pinned to the top, logo on the
@@ -44,25 +45,10 @@ function jump(id: string) {
   document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-const THEME_KEY = "bizlit-landing-theme";
-
-/** The visitor's last choice, falling back to what their system asks for. */
-function storedDark(): boolean {
-  try {
-    const stored = window.localStorage.getItem(THEME_KEY);
-    if (stored === "dark") return true;
-    if (stored === "light") return false;
-  } catch {
-    /* a browser that blocks storage still gets the system preference */
-  }
-  return typeof window.matchMedia === "function"
-    ? window.matchMedia("(prefers-color-scheme: dark)").matches
-    : false;
-}
-
 export default function Header() {
   const [open, setOpen] = useState<string | null>(null);
-  const [dark, setDark] = useState(storedDark);
+  // The day/night choice is shared with the auth screens — see `./theme`.
+  const [dark, setDark] = useLandingDark();
   const [mobile, setMobile] = useState(false);
   const [hidden, setHidden] = useState(false);
   const lastY = useRef(0);
@@ -70,20 +56,6 @@ export default function Header() {
   // Read through refs inside the scroll listener so it never needs re-binding.
   const menuOpen = useRef(false);
   menuOpen.current = open !== null || mobile;
-
-  /*
-   * The day/night switch paints its skin on the page wrapper it lives in —
-   * `.theme-odoo` — and nowhere else, so the signed-in workspace keeps the
-   * theme it already has. The choice is remembered for the next visit.
-   */
-  useEffect(() => {
-    barRef.current?.closest(".theme-odoo")?.classList.toggle("theme-odoo-dark", dark);
-    try {
-      window.localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
-    } catch {
-      /* nothing to remember with */
-    }
-  }, [dark]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -177,23 +149,7 @@ export default function Header() {
           {/* account actions */}
           <div className="flex shrink-0 items-center gap-2">
             {/* day / night */}
-            <button
-              type="button"
-              role="switch"
-              aria-checked={dark}
-              aria-label={dark ? "Switch to the day theme" : "Switch to the night theme"}
-              title={dark ? "Day theme" : "Night theme"}
-              onClick={() => setDark((v) => !v)}
-              className="od-theme-switch me-1"
-            >
-              <span aria-hidden className="od-theme-switch-thumb" />
-              <span aria-hidden className="od-theme-switch-cell" data-on={!dark}>
-                <Sun size={15} />
-              </span>
-              <span aria-hidden className="od-theme-switch-cell" data-on={dark}>
-                <Moon size={15} />
-              </span>
-            </button>
+            <ThemeSwitch dark={dark} onToggle={() => setDark((v) => !v)} className="me-1" />
             <a
               href="/sign-in"
               className="hidden px-3 py-2 text-[15px] font-medium text-[var(--od-ink)] transition-colors hover:text-[var(--od-violet)] sm:block"

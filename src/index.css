@@ -1545,3 +1545,99 @@ html {
 .theme-odoo.theme-odoo-dark .od-mobile-panels .od-shot-frame {
   background-color: #fff;
 }
+
+/*
+ * -------------------------------------------------------------------- auth
+ *
+ * Clerk draws the sign-up / sign-in widget inside our auth card. Its own
+ * chrome — the inner card, the header it hides anyway and the footer that
+ * repeats our switcher — is suppressed here, and the surfaces it keeps are
+ * pointed at the theme tokens, so the night theme reaches the inputs too.
+ *
+ * Plain unlayered CSS on purpose: Clerk injects an unlayered stylesheet of
+ * its own, so a Tailwind utility (a layered rule) can never win against it no
+ * matter the order — a scoped selector can, and does.
+ */
+.od-auth .cl-cardBox,
+.od-auth .cl-card {
+  width: 100%;
+  background-color: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.od-auth .cl-header,
+.od-auth .cl-logoBox,
+.od-auth .cl-footer {
+  display: none;
+}
+
+.od-auth .cl-formFieldLabel,
+.od-auth .cl-formFieldHintText,
+.od-auth .cl-dividerText {
+  color: var(--od-muted);
+}
+
+.od-auth .cl-formFieldInput,
+.od-auth .cl-input {
+  background-color: var(--od-surface);
+  border: 1px solid var(--od-border);
+  border-radius: 0.75rem;
+  color: var(--od-ink);
+}
+
+.od-auth .cl-formFieldInput:focus,
+.od-auth .cl-input:focus {
+  border-color: var(--od-violet);
+  box-shadow: 0 0 0 3px rgba(109, 40, 217, 0.16);
+}
+
+/* Sign-in lays the providers out small and left; the form reads better with
+   the row filled, the way sign-up already draws it. */
+.od-auth .cl-socialButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.od-auth .cl-socialButtonsBlockButton {
+  flex: 1 1 0;
+  background-color: var(--od-surface);
+  border: 1px solid var(--od-border);
+  border-radius: 0.75rem;
+  color: var(--od-body);
+}
+
+.od-auth .cl-socialButtonsBlockButton:hover {
+  background-color: var(--od-band);
+}
+
+/* Sign-in renders the providers as icon-only buttons; give them the same
+   frame the sign-up row gets, so the row reads the same either way. */
+.od-auth .cl-socialButtonsIconButton {
+  flex: 1 1 0;
+  background-color: var(--od-surface);
+  border: 1px solid var(--od-border);
+  border-radius: 0.75rem;
+  color: var(--od-body);
+}
+
+.od-auth .cl-socialButtonsIconButton:hover {
+  background-color: var(--od-band);
+}
+
+/* The panel beside the form keeps the footer's violet whatever the page
+   around it is doing — white writing needs a dark panel in both themes, and
+   the landing's night tokens would carry it pale. */
+.od-auth .od-auth-panel {
+  background-image: linear-gradient(165deg, #4c1d95, #1d1533);
+}
+
+.theme-odoo.theme-odoo-dark .od-auth-panel {
+  background-image: linear-gradient(165deg, #3b1373, #150f27);
+}
+
+.od-auth .cl-dividerLine {
+  background-color: var(--od-border);
+}

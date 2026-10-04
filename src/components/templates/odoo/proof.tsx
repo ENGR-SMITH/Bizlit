@@ -12,12 +12,45 @@ import { SOURCES } from "./apps-grid";
  * 350deg, pulled up 3rem and in from the right 4rem), then the quote icon and
  * a 0.75rem grey card in two columns.
  *
- * The tiles are photographs of real goods — one per trade the desk is run for,
- * the same trades the sources wall names — cropped into Odoo's circles,
- * squircles and rounded squares. They stand in for the portraits the reference
- * site uses, which we have no library of, and the tints behind them are only
- * there so a tile never flashes empty while its photo loads.
+ * The tiles are photographs of real goods — a product or a service from every
+ * trade the desk is run for, the same trades the sources wall names, plus a
+ * few more lines of stock (cameras, sneakers, wine, plants) — cropped into
+ * Odoo's circles, squircles and rounded squares. They stand in for the
+ * portraits the reference site uses, which we have no library of, and the
+ * tints behind them are only there so a tile never flashes empty while its
+ * photo loads.
  */
+
+/** The eleven trades beyond the sources wall's own list, kept as stock photos. */
+const GOOD_SLUGS = [
+  "cameras",
+  "sneakers",
+  "watches",
+  "wine",
+  "cheese",
+  "plants",
+  "toys",
+  "paint",
+  "fabric",
+  "stationery",
+  "bikes",
+];
+
+/*
+ * One photo per tile, and no photo twice: the 24 trade shots run down the wall
+ * two at a time with one of the eleven goods between them — 35 tiles, 35
+ * files. (The reference site fills its wall with people; a wall of goods from
+ * every trade says the same thing about who is already selling here.)
+ */
+const MOSAIC_PHOTOS: string[] = (() => {
+  const goods = [...GOOD_SLUGS];
+  const trades = SOURCES.map((source) => source.slug);
+  const photos: string[] = [];
+  for (let i = 0; i < 35; i++) {
+    photos.push(i % 3 === 2 ? goods.shift()! : trades.shift()!);
+  }
+  return photos;
+})();
 
 const MOSAIC_TINTS = [
   "var(--od-tile-1)",
@@ -44,9 +77,9 @@ function Mosaic() {
           className={`m-[0.25rem] h-20 w-20 overflow-hidden md:m-[0.75rem] ${TILE_SHAPES[i % TILE_SHAPES.length]}`}
           style={{ backgroundColor: MOSAIC_TINTS[i % MOSAIC_TINTS.length] }}
         >
-          {/* a stride of seven walks all 24 trades before it repeats one */}
+          {/* each tile has its own file; nothing in the wall repeats */}
           <img
-            src={`/img/products/${SOURCES[(i * 7) % SOURCES.length].slug}.jpg`}
+            src={`/img/products/${MOSAIC_PHOTOS[i]}.jpg`}
             alt=""
             loading="lazy"
             className="h-full w-full object-cover"
