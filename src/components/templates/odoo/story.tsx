@@ -194,7 +194,7 @@ const CELLS: { src: string; area: string; alt: string; className?: string }[] = 
   },
   {
     src: SHOTS.competition,
-    area: "11 / 1 / 17 / 7",
+    area: "9 / 1 / 18 / 9",
     alt: "The BIZLIT competition screen with a rival's traffic sources and live campaigns",
     className: "object-left",
   },

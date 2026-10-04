@@ -382,6 +382,7 @@ html {
    */
   --od-marker-yellow: url("/img/odoo/highlights/yellow_highlight_bold_05.svg");
   --od-marker-yellow-03: url("/img/odoo/highlights/yellow_highlight_03.svg");
+  --od-section-highlight: var(--od-marker-yellow-03);
   --od-marker-blue: url("/img/odoo/highlights/blue_highlight_01.svg");
   --od-marker-blue-03: url("/img/odoo/highlights/blue_highlight_03.svg");
   --od-marker-blue-bold: url("/img/odoo/highlights/blue_highlight_bold_01.svg");
@@ -1439,6 +1440,7 @@ html {
    * Same artwork, different ink.
    */
   --od-marker-yellow: url("/img/odoo/highlights/violet_highlight_bold_05.svg");
+  --od-section-highlight: url("/img/odoo/highlights/yellow_highlight_03.svg");
   --od-tone-violet-bg: #2a1c4f;
   --od-tone-violet-fg: #c4b5fd;
   --od-tone-orchid-bg: #321e5c;

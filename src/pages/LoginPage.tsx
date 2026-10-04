@@ -41,7 +41,9 @@ function clerkAppearance(dark: boolean) {
       fontFamily: "inherit",
     },
     elements: {
-      rootBox: "w-full",
+      rootBox: "mx-auto w-full max-w-[480px]",
+      form: "mx-auto w-full max-w-[480px]",
+      card: "mx-auto w-full max-w-[480px]",
       socialButtonsBlockButton:
         "rounded-xl border border-[var(--od-border)] bg-[var(--od-surface)] text-[var(--od-body)] hover:bg-[var(--od-band)]",
       socialButtonsBlockButtonText: "text-sm font-medium text-[var(--od-ink)]",
@@ -76,7 +78,7 @@ function goToPath(path: string) {
 const COPY = {
   "sign-up": {
     heading: "Create your account",
-    sub: "Takes a minute — then we ask a few questions about your business.",
+    sub: "",
   },
   "sign-in": {
     heading: "Welcome back",
@@ -147,63 +149,56 @@ export function LoginPage({
             </h1>
           </aside>
 
-          <section className="p-6 sm:p-9">
-            <h2
-              className="text-[2rem] leading-none font-bold text-[var(--od-ink)]"
-              style={{ fontFamily: "var(--font-display)" }}
-            >
-              {copy.heading}
-            </h2>
-            <p className="mt-2 text-sm text-[var(--od-muted)]">{copy.sub}</p>
+          <section className="flex w-full items-center justify-center p-6 sm:p-9">
+            <div className="w-full max-w-[480px]">
+              <h2
+                className="text-center text-[2rem] leading-none font-bold text-[var(--od-ink)]"
+                style={{ fontFamily: "var(--font-display)" }}
+              >
+                {copy.heading}
+              </h2>
+              {copy.sub ? <p className="mt-2 text-sm text-[var(--od-muted)]">{copy.sub}</p> : null}
 
-            {/* Our card, our headings, our switcher — Clerk only draws the form. */}
-            <div className="mt-6 flex rounded-full border border-[var(--od-border)] bg-[var(--od-band)] p-1">
-              {(
-                [
-                  { value: "sign-in", label: "I already have one" },
-                  { value: "sign-up", label: "Create account" },
-                ] as const
-              ).map((tab) => (
-                <button
-                  key={tab.value}
-                  type="button"
-                  aria-pressed={mode === tab.value}
-                  onClick={() => {
-                    setMode(tab.value);
-                    // Clerk is mounted on a real path, so keep the URL in step.
-                    goToPath(tab.value === "sign-up" ? "/sign-up" : "/sign-in");
-                  }}
-                  className={cn(
-                    "flex-1 cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-colors",
-                    mode === tab.value
-                      ? "bg-[var(--od-violet-solid)] text-white shadow-[0_12px_24px_-14px_rgba(109,40,217,0.9)]"
-                      : "text-[var(--od-body)] hover:text-[var(--od-ink)]",
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
+              {/* Our card, our headings, our switcher — Clerk only draws the form. */}
+              <div className="mt-6 flex rounded-full border border-[var(--od-border)] bg-[var(--od-band)] p-1">
+                {(
+                  [
+                    { value: "sign-in", label: "I already have one" },
+                    { value: "sign-up", label: "Create account" },
+                  ] as const
+                ).map((tab) => (
+                  <button
+                    key={tab.value}
+                    type="button"
+                    aria-pressed={mode === tab.value}
+                    onClick={() => {
+                      setMode(tab.value);
+                      // Clerk is mounted on a real path, so keep the URL in step.
+                      goToPath(tab.value === "sign-up" ? "/sign-up" : "/sign-in");
+                    }}
+                    className={cn(
+                      "flex-1 cursor-pointer rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+                      mode === tab.value
+                        ? "bg-[var(--od-violet-solid)] text-white shadow-[0_12px_24px_-14px_rgba(109,40,217,0.9)]"
+                        : "text-[var(--od-body)] hover:text-[var(--od-ink)]",
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="mt-6">
+                {mode === "sign-up" ? (
+                  <SignUp routing="path" path="/sign-up" appearance={clerkAppearance(dark)} />
+                ) : (
+                  <SignIn routing="path" path="/sign-in" appearance={clerkAppearance(dark)} />
+                )}
+              </div>
             </div>
-
-            <div className="mt-6">
-              {mode === "sign-up" ? (
-                <SignUp routing="path" path="/sign-up" appearance={clerkAppearance(dark)} />
-              ) : (
-                <SignIn routing="path" path="/sign-in" appearance={clerkAppearance(dark)} />
-              )}
-            </div>
-
-            <p className="mt-6 text-center text-xs text-[var(--od-muted)]">
-              After signing up you will be asked a few questions about your business so the
-              monitoring starts on the right competitors and clients.
-            </p>
           </section>
         </div>
       </main>
-
-      <footer className="px-4 pb-8 text-center text-xs text-[var(--od-muted)]">
-        No credit card required · Cancel whenever you like
-      </footer>
     </div>
   );
 }
