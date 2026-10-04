@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 @import "@fontsource-variable/inter";
+@import "@fontsource-variable/caveat";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -327,8 +328,1220 @@ html {
   --accent: oklch(0.21 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.269 0 0);
+  --destructive-foreground: oklch(0.637 0.237 25.331);  --border: oklch(0.269 0 0);
   --input: oklch(0.269 0 0);
   --ring: oklch(0.439 0 0);
+}
+
+/* ------------------------------------------------------------------ odoo */
+/*
+ * The Odoo marketing skin, scoped to the landing page so it never leaks into
+ * the signed-in workspace. Type scale, control sizes and layout are read off
+ * odoo.com itself; the palette is BIZLIT's own — the mark's violet
+ * #6d28d9 leading, orchid #a855f7 second, gold #fbb130 on the markers.
+ *
+ * The signature is the display face: every big heading is Caveat 700, a
+ * handwriting font, paired with Inter for everything else. Highlights are
+ * hand-drawn marker strokes used as background images behind the words.
+ *
+ * Deliberately light-only — odoo.com has no dark variant, and a half-inverted
+ * copy of it would read as a different design rather than the same one.
+ */
+.theme-odoo {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Caveat Variable", "Caveat", ui-rounded, cursive;
+
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--od-body);
+  background-color: var(--od-page);
+
+  --od-violet: #6d28d9;
+  --od-violet-deep: #4c1d95;
+  --od-orchid: #a855f7;
+  --od-ink: #17102b;
+  --od-body: #443a5c;
+  --od-muted: #6f6889;
+  --od-band: #f6f3fd;
+  --od-band-soft: #fbf9ff;
+  --od-gold: #fbb130;
+  --od-rose: #ec4899;
+  --od-indigo: #6366f1;
+  --od-border: #e9e3f7;
+  --od-footer: #1d1533;
+  --od-footer-deep: #150f27;
+
+  /*
+   * odoo.com's own artwork, downloaded from the paths its stylesheet points
+   * at: `highlights/` for the marker strokes, `graphics/` and `arrows/` for
+   * the doodles and pen lines. Every one of them is painted with
+   * `background-size: contain` (or drawn at its intrinsic size) at the
+   * per-stroke anchor Odoo uses, so no sweep is ever stretched.
+   */
+  --od-marker-yellow: url("/img/odoo/highlights/yellow_highlight_bold_05.svg");
+  --od-marker-yellow-03: url("/img/odoo/highlights/yellow_highlight_03.svg");
+  --od-marker-blue: url("/img/odoo/highlights/blue_highlight_01.svg");
+  --od-marker-blue-03: url("/img/odoo/highlights/blue_highlight_03.svg");
+  --od-marker-blue-bold: url("/img/odoo/highlights/blue_highlight_bold_01.svg");
+  --od-marker-scribble: url("/img/odoo/highlights/blue_highlight_scribble_01.svg");
+  --od-marker-red: url("/img/odoo/highlights/red_highlight_03.svg");
+  --od-marker-green: url("/img/odoo/highlights/green_highlight_03.svg");
+  --od-pen: url("/img/odoo/underline.svg");
+  --od-arrow: url("/img/odoo/arrow_doodle_1.svg");
+}
+
+/* The handwriting face. On odoo.com only `[class*="display-"]` gets it. */
+.theme-odoo .od-display,
+.theme-odoo .od-d1,
+.theme-odoo .od-d2,
+.theme-odoo .od-d3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  color: var(--od-ink);
+  letter-spacing: 0;
+}
+
+/*
+ * odoo.com's type scale, copied from its typography stylesheet:
+ * `.x_wd *[class*="display-"]{font-family: "Caveat"; font-weight: 700}`,
+ * display-1..3 at these fluid sizes, capped at 1200px, and `line-height: 1`
+ * on displays 1-4. `od-h4` is the plain h4 that titles its feature tiles.
+ */
+.theme-odoo .od-d1 {
+  font-size: calc(1.675rem + 5.1vw);
+  line-height: 1;
+}
+
+.theme-odoo .od-d2 {
+  font-size: calc(1.6rem + 4.2vw);
+  line-height: 1;
+}
+
+.theme-odoo .od-d3 {
+  font-size: calc(1.525rem + 3.3vw);
+  line-height: 1;
+}
+
+@media (min-width: 1200px) {
+  .theme-odoo .od-d1 {
+    font-size: 5.5rem;
+  }
+  .theme-odoo .od-d2 {
+    font-size: 4.75rem;
+  }
+  .theme-odoo .od-d3 {
+    font-size: 4rem;
+  }
+}
+
+.theme-odoo .od-h4 {
+  font-family: var(--font-sans);
+  font-size: calc(1.275rem + 0.3vw);
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--od-ink);
+}
+
+@media (min-width: 1200px) {
+  .theme-odoo .od-h4 {
+    font-size: 1.5rem;
+  }
+}
+
+/*
+ * Marker strokes. Odoo never stretches one: `background-size: contain` plus
+ * the stroke's own anchor, with `white-space: nowrap` so the phrase it sits
+ * behind can never break across two lines. No padding, no negative margins.
+ */
+.theme-odoo .od-mark {
+  background-image: var(--od-marker-yellow);
+  background-repeat: no-repeat;
+  background-position: center 60%;
+  background-size: contain;
+  white-space: nowrap;
+}
+
+.theme-odoo .od-mark-03 {
+  background-image: var(--od-marker-yellow-03);
+  background-position: center bottom;
+}
+
+.theme-odoo .od-mark-coral {
+  background-image: var(--od-marker-red);
+  background-position: center bottom;
+}
+
+.theme-odoo .od-mark-blue {
+  background-image: var(--od-marker-blue);
+  background-position: center bottom;
+}
+
+.theme-odoo .od-mark-blue-bold {
+  background-image: var(--od-marker-blue-bold);
+  background-position: center bottom;
+}
+
+/* The pen line that sits under a word (`.x_wd_display_underline`). */
+.theme-odoo .od-underline {
+  background-image: var(--od-pen);
+  background-repeat: no-repeat;
+  background-size: contain;
+  background-position: center bottom 10%;
+}
+
+.theme-odoo .od-underline-teal {
+  background-image: var(--od-marker-green);
+  background-position: center bottom;
+}
+
+/* `.btn` exactly as odoo.com ships it. */
+.theme-odoo .od-btn {
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  vertical-align: middle;
+  cursor: pointer;
+  transition:
+    color 0.15s ease-in-out,
+    background-color 0.15s ease-in-out,
+    border-color 0.15s ease-in-out,
+    box-shadow 0.15s ease-in-out;
+}
+
+.theme-odoo .od-btn-primary {
+  background-color: var(--od-violet-solid);
+  border-color: var(--od-violet-solid);
+  color: #fff;
+}
+
+.theme-odoo .od-btn-primary:hover {
+  background-color: #5b21b6;
+  border-color: #5b21b6;
+  color: #fff;
+}
+
+.theme-odoo .od-btn-light {
+  background-color: #f4f1fd;
+  border-color: #f4f1fd;
+  color: var(--od-violet);
+}
+
+.theme-odoo .od-btn-light:hover {
+  background-color: #ece5fb;
+  color: var(--od-violet);
+}
+
+.theme-odoo .od-btn-lg {
+  padding: 1rem 2rem;
+  font-size: 1.125rem;
+  border-radius: 0.5rem;
+}
+
+.theme-odoo .od-btn-sm {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  border-radius: 0.5rem;
+}
+
+/*
+ * The grey runs close on Odoo's 10rem corners — a leaf on the features band,
+ * a bowl on the ones that end a run.
+ */
+.theme-odoo .od-leaf {
+  border-top-left-radius: 10rem;
+  border-bottom-right-radius: 10rem;
+}
+
+.theme-odoo .od-tile-shadow {
+  box-shadow: 0 1px 2px rgba(23, 16, 43, 0.06), 0 6px 14px -8px rgba(23, 16, 43, 0.16);
+}
+
+
+/*
+ * `MarshmallowIcons` — the icon font odoo.com itself ships, downloaded from
+ * /openerp_website/static/src/fonts/ and served locally. 216 glyphs in the
+ * private-use area, so every icon on the reference site is a character rather
+ * than a drawing.
+ */
+@font-face {
+  font-family: "MarshmallowIcons";
+  src: url("/fonts/MarshmallowIcons.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 900;
+  font-display: block;
+}
+
+/*
+ * `.x_wd_icon`, exactly: the family, weight 900, `line-height: 1`, and a
+ * `::before` whose content is the `--icon` custom property the name rules
+ * below set. Size and colour come from the same two attributes the reference
+ * uses, so an icon is written as
+ * `<i class="od-icon" data-wd-icon="megaphone" data-wd-icon-size="3" />`.
+ */
+.theme-odoo .od-icon {
+  font-style: normal;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  font-family: "MarshmallowIcons";
+  font-weight: 900;
+  position: relative;
+  line-height: 1;
+  overflow: visible;
+}
+
+/*
+ * The glyph drops from the box's left edge: the font's icons are drawn from
+ * just left of the pen to a full em to its right, with no advance width of
+ * their own, so the em box above is what holds their space.
+ */
+.theme-odoo .od-icon[data-wd-icon]::before {
+  content: var(--icon);
+  color: inherit;
+  display: block;
+  line-height: 1;
+}
+
+.theme-odoo .od-icon[data-wd-icon-size="1"] { font-size: 24px; }
+.theme-odoo .od-icon[data-wd-icon-size="2"] { font-size: 32px; }
+.theme-odoo .od-icon[data-wd-icon-size="3"] { font-size: 48px; }
+.theme-odoo .od-icon[data-wd-icon-size="4"] { font-size: 64px; }
+.theme-odoo .od-icon[data-wd-icon-size="5"] { font-size: 80px; }
+.theme-odoo .od-icon[data-wd-icon-size="6"] { font-size: 96px; }
+.theme-odoo .od-icon[data-wd-icon-size="7"] { font-size: 112px; }
+.theme-odoo .od-icon[data-wd-icon-size="8"] { font-size: 128px; }
+
+.theme-odoo .od-icon[data-wd-icon-color="o-color-6"] { color: #F472B6; }
+.theme-odoo .od-icon[data-wd-icon-color="o-color-7"] { color: #FBB130; }
+.theme-odoo .od-icon[data-wd-icon-color="o-color-8"] { color: #818CF8; }
+.theme-odoo .od-icon[data-wd-icon-color="o-color-9"] { color: #C084FC; }
+
+/* The name -> codepoint map, straight out of the reference stylesheet. */
+.theme-odoo .od-icon[data-wd-icon="analytics"] { --icon: "\e001"; }
+.theme-odoo .od-icon[data-wd-icon="arrow_circle_left"] { --icon: "\e002"; }
+.theme-odoo .od-icon[data-wd-icon="arrow_circle_right"] { --icon: "\e003"; }
+.theme-odoo .od-icon[data-wd-icon="backpack"] { --icon: "\e004"; }
+.theme-odoo .od-icon[data-wd-icon="bag"] { --icon: "\e005"; }
+.theme-odoo .od-icon[data-wd-icon="bank"] { --icon: "\e006"; }
+.theme-odoo .od-icon[data-wd-icon="bar_chart"] { --icon: "\e007"; }
+.theme-odoo .od-icon[data-wd-icon="barcode_scanner"] { --icon: "\e008"; }
+.theme-odoo .od-icon[data-wd-icon="basket"] { --icon: "\e009"; }
+.theme-odoo .od-icon[data-wd-icon="beer"] { --icon: "\e00a"; }
+.theme-odoo .od-icon[data-wd-icon="bell"] { --icon: "\e00b"; }
+.theme-odoo .od-icon[data-wd-icon="bike"] { --icon: "\e00c"; }
+.theme-odoo .od-icon[data-wd-icon="bill"] { --icon: "\e00d"; }
+.theme-odoo .od-icon[data-wd-icon="bottle"] { --icon: "\e00e"; }
+.theme-odoo .od-icon[data-wd-icon="box_front"] { --icon: "\e00f"; }
+.theme-odoo .od-icon[data-wd-icon="brain"] { --icon: "\e010"; }
+.theme-odoo .od-icon[data-wd-icon="brainstorming"] { --icon: "\e011"; }
+.theme-odoo .od-icon[data-wd-icon="broken_chain"] { --icon: "\e012"; }
+.theme-odoo .od-icon[data-wd-icon="broom"] { --icon: "\e013"; }
+.theme-odoo .od-icon[data-wd-icon="bulb"] { --icon: "\e014"; }
+.theme-odoo .od-icon[data-wd-icon="cake"] { --icon: "\e015"; }
+.theme-odoo .od-icon[data-wd-icon="calculator"] { --icon: "\e016"; }
+.theme-odoo .od-icon[data-wd-icon="calculator_front"] { --icon: "\e017"; }
+.theme-odoo .od-icon[data-wd-icon="calendar"] { --icon: "\e018"; }
+.theme-odoo .od-icon[data-wd-icon="call"] { --icon: "\e019"; }
+.theme-odoo .od-icon[data-wd-icon="camera"] { --icon: "\e01a"; }
+.theme-odoo .od-icon[data-wd-icon="card_front"] { --icon: "\e01b"; }
+.theme-odoo .od-icon[data-wd-icon="careful"] { --icon: "\e01c"; }
+.theme-odoo .od-icon[data-wd-icon="cart"] { --icon: "\e01d"; }
+.theme-odoo .od-icon[data-wd-icon="cash_register"] { --icon: "\e01e"; }
+.theme-odoo .od-icon[data-wd-icon="chefs_hat"] { --icon: "\e01f"; }
+.theme-odoo .od-icon[data-wd-icon="chip"] { --icon: "\e020"; }
+.theme-odoo .od-icon[data-wd-icon="clock"] { --icon: "\e021"; }
+.theme-odoo .od-icon[data-wd-icon="clover"] { --icon: "\e022"; }
+.theme-odoo .od-icon[data-wd-icon="code_square"] { --icon: "\e023"; }
+.theme-odoo .od-icon[data-wd-icon="coffee"] { --icon: "\e024"; }
+.theme-odoo .od-icon[data-wd-icon="command"] { --icon: "\e025"; }
+.theme-odoo .od-icon[data-wd-icon="conversation"] { --icon: "\e026"; }
+.theme-odoo .od-icon[data-wd-icon="cookie"] { --icon: "\e027"; }
+.theme-odoo .od-icon[data-wd-icon="copy"] { --icon: "\e028"; }
+.theme-odoo .od-icon[data-wd-icon="croissant"] { --icon: "\e029"; }
+.theme-odoo .od-icon[data-wd-icon="cross"] { --icon: "\e02a"; }
+.theme-odoo .od-icon[data-wd-icon="crown_basic"] { --icon: "\e02b"; }
+.theme-odoo .od-icon[data-wd-icon="crown_quote"] { --icon: "\e02c"; }
+.theme-odoo .od-icon[data-wd-icon="customers"] { --icon: "\e02d"; }
+.theme-odoo .od-icon[data-wd-icon="dashboard"] { --icon: "\e02e"; }
+.theme-odoo .od-icon[data-wd-icon="dashboard_analytics"] { --icon: "\e02f"; }
+.theme-odoo .od-icon[data-wd-icon="desktop"] { --icon: "\e030"; }
+.theme-odoo .od-icon[data-wd-icon="diamond"] { --icon: "\e031"; }
+.theme-odoo .od-icon[data-wd-icon="digital_marketing"] { --icon: "\e032"; }
+.theme-odoo .od-icon[data-wd-icon="diploma"] { --icon: "\e033"; }
+.theme-odoo .od-icon[data-wd-icon="download"] { --icon: "\e034"; }
+.theme-odoo .od-icon[data-wd-icon="drawer"] { --icon: "\e035"; }
+.theme-odoo .od-icon[data-wd-icon="drink"] { --icon: "\e036"; }
+.theme-odoo .od-icon[data-wd-icon="education_hat"] { --icon: "\e037"; }
+.theme-odoo .od-icon[data-wd-icon="emoji_expert"] { --icon: "\e038"; }
+.theme-odoo .od-icon[data-wd-icon="emoji_sad"] { --icon: "\e039"; }
+.theme-odoo .od-icon[data-wd-icon="emoji_smiling"] { --icon: "\e03a"; }
+.theme-odoo .od-icon[data-wd-icon="emoji_smiling_funny"] { --icon: "\e03b"; }
+.theme-odoo .od-icon[data-wd-icon="emoji_surprised"] { --icon: "\e03c"; }
+.theme-odoo .od-icon[data-wd-icon="emoji_worried"] { --icon: "\e03d"; }
+.theme-odoo .od-icon[data-wd-icon="factory"] { --icon: "\e03e"; }
+.theme-odoo .od-icon[data-wd-icon="file_add"] { --icon: "\e03f"; }
+.theme-odoo .od-icon[data-wd-icon="file_cv"] { --icon: "\e040"; }
+.theme-odoo .od-icon[data-wd-icon="file_letter"] { --icon: "\e041"; }
+.theme-odoo .od-icon[data-wd-icon="file_link"] { --icon: "\e042"; }
+.theme-odoo .od-icon[data-wd-icon="file_list"] { --icon: "\e043"; }
+.theme-odoo .od-icon[data-wd-icon="file_notes"] { --icon: "\e044"; }
+.theme-odoo .od-icon[data-wd-icon="file_pdf"] { --icon: "\e045"; }
+.theme-odoo .od-icon[data-wd-icon="file_quote"] { --icon: "\e046"; }
+.theme-odoo .od-icon[data-wd-icon="file_table"] { --icon: "\e047"; }
+.theme-odoo .od-icon[data-wd-icon="filter"] { --icon: "\e048"; }
+.theme-odoo .od-icon[data-wd-icon="first_aid"] { --icon: "\e049"; }
+.theme-odoo .od-icon[data-wd-icon="flashlight"] { --icon: "\e04a"; }
+.theme-odoo .od-icon[data-wd-icon="flowers"] { --icon: "\e04b"; }
+.theme-odoo .od-icon[data-wd-icon="folder_add"] { --icon: "\e04c"; }
+.theme-odoo .od-icon[data-wd-icon="folder_delete"] { --icon: "\e04d"; }
+.theme-odoo .od-icon[data-wd-icon="folder_empty"] { --icon: "\e04e"; }
+.theme-odoo .od-icon[data-wd-icon="fork_knife"] { --icon: "\e04f"; }
+.theme-odoo .od-icon[data-wd-icon="free"] { --icon: "\e050"; }
+.theme-odoo .od-icon[data-wd-icon="gear"] { --icon: "\e051"; }
+.theme-odoo .od-icon[data-wd-icon="gift"] { --icon: "\e052"; }
+.theme-odoo .od-icon[data-wd-icon="globe"] { --icon: "\e053"; }
+.theme-odoo .od-icon[data-wd-icon="grade"] { --icon: "\e054"; }
+.theme-odoo .od-icon[data-wd-icon="hamburguer"] { --icon: "\e055"; }
+.theme-odoo .od-icon[data-wd-icon="hand_ok"] { --icon: "\e056"; }
+.theme-odoo .od-icon[data-wd-icon="hand_point_right"] { --icon: "\e057"; }
+.theme-odoo .od-icon[data-wd-icon="hand_tap"] { --icon: "\e058"; }
+.theme-odoo .od-icon[data-wd-icon="hand_truck"] { --icon: "\e059"; }
+.theme-odoo .od-icon[data-wd-icon="hands_folded"] { --icon: "\e05a"; }
+.theme-odoo .od-icon[data-wd-icon="headset"] { --icon: "\e05b"; }
+.theme-odoo .od-icon[data-wd-icon="heart"] { --icon: "\e05c"; }
+.theme-odoo .od-icon[data-wd-icon="heart_3"] { --icon: "\e05d"; }
+.theme-odoo .od-icon[data-wd-icon="heart_beat"] { --icon: "\e05e"; }
+.theme-odoo .od-icon[data-wd-icon="hide"] { --icon: "\e05f"; }
+.theme-odoo .od-icon[data-wd-icon="home"] { --icon: "\e060"; }
+.theme-odoo .od-icon[data-wd-icon="info_circle"] { --icon: "\e061"; }
+.theme-odoo .od-icon[data-wd-icon="instagram"] { --icon: "\e062"; }
+.theme-odoo .od-icon[data-wd-icon="kettlebells"] { --icon: "\e063"; }
+.theme-odoo .od-icon[data-wd-icon="key"] { --icon: "\e064"; }
+.theme-odoo .od-icon[data-wd-icon="keyboard_key"] { --icon: "\e065"; }
+.theme-odoo .od-icon[data-wd-icon="kiosk"] { --icon: "\e066"; }
+.theme-odoo .od-icon[data-wd-icon="laptop"] { --icon: "\e067"; }
+.theme-odoo .od-icon[data-wd-icon="linkedin"] { --icon: "\e068"; }
+.theme-odoo .od-icon[data-wd-icon="location"] { --icon: "\e069"; }
+.theme-odoo .od-icon[data-wd-icon="luggage_rack"] { --icon: "\e06a"; }
+.theme-odoo .od-icon[data-wd-icon="magic_wand"] { --icon: "\e06b"; }
+.theme-odoo .od-icon[data-wd-icon="mail"] { --icon: "\e06c"; }
+.theme-odoo .od-icon[data-wd-icon="mail_gift"] { --icon: "\e06d"; }
+.theme-odoo .od-icon[data-wd-icon="mail_settings"] { --icon: "\e06e"; }
+.theme-odoo .od-icon[data-wd-icon="mail_surprise"] { --icon: "\e06f"; }
+.theme-odoo .od-icon[data-wd-icon="map"] { --icon: "\e070"; }
+.theme-odoo .od-icon[data-wd-icon="medical_logo"] { --icon: "\e071"; }
+.theme-odoo .od-icon[data-wd-icon="megaphone"] { --icon: "\e072"; }
+.theme-odoo .od-icon[data-wd-icon="megaphone_rotate"] { --icon: "\e073"; }
+.theme-odoo .od-icon[data-wd-icon="message"] { --icon: "\e074"; }
+.theme-odoo .od-icon[data-wd-icon="mic"] { --icon: "\e075"; }
+.theme-odoo .od-icon[data-wd-icon="mobile_scan"] { --icon: "\e076"; }
+.theme-odoo .od-icon[data-wd-icon="money"] { --icon: "\e077"; }
+.theme-odoo .od-icon[data-wd-icon="money_more"] { --icon: "\e078"; }
+.theme-odoo .od-icon[data-wd-icon="money_plant"] { --icon: "\e079"; }
+.theme-odoo .od-icon[data-wd-icon="more"] { --icon: "\e07a"; }
+.theme-odoo .od-icon[data-wd-icon="network"] { --icon: "\e07b"; }
+.theme-odoo .od-icon[data-wd-icon="new"] { --icon: "\e07c"; }
+.theme-odoo .od-icon[data-wd-icon="paint_brush_little"] { --icon: "\e07d"; }
+.theme-odoo .od-icon[data-wd-icon="paint_bucket"] { --icon: "\e07e"; }
+.theme-odoo .od-icon[data-wd-icon="paint_roller"] { --icon: "\e07f"; }
+.theme-odoo .od-icon[data-wd-icon="payment_terminal"] { --icon: "\e080"; }
+.theme-odoo .od-icon[data-wd-icon="pen"] { --icon: "\e081"; }
+.theme-odoo .od-icon[data-wd-icon="pencil"] { --icon: "\e082"; }
+.theme-odoo .od-icon[data-wd-icon="pencil_ruler"] { --icon: "\e083"; }
+.theme-odoo .od-icon[data-wd-icon="pencil_writing"] { --icon: "\e084"; }
+.theme-odoo .od-icon[data-wd-icon="people"] { --icon: "\e085"; }
+.theme-odoo .od-icon[data-wd-icon="phone"] { --icon: "\e086"; }
+.theme-odoo .od-icon[data-wd-icon="phone_setting"] { --icon: "\e087"; }
+.theme-odoo .od-icon[data-wd-icon="pie"] { --icon: "\e088"; }
+.theme-odoo .od-icon[data-wd-icon="pie_piece"] { --icon: "\e089"; }
+.theme-odoo .od-icon[data-wd-icon="piggy_bank"] { --icon: "\e08a"; }
+.theme-odoo .od-icon[data-wd-icon="pin"] { --icon: "\e08b"; }
+.theme-odoo .od-icon[data-wd-icon="play"] { --icon: "\e08c"; }
+.theme-odoo .od-icon[data-wd-icon="plug"] { --icon: "\e08d"; }
+.theme-odoo .od-icon[data-wd-icon="plus"] { --icon: "\e08e"; }
+.theme-odoo .od-icon[data-wd-icon="pointer"] { --icon: "\e08f"; }
+.theme-odoo .od-icon[data-wd-icon="printer"] { --icon: "\e090"; }
+.theme-odoo .od-icon[data-wd-icon="puzzle_left"] { --icon: "\e091"; }
+.theme-odoo .od-icon[data-wd-icon="qa"] { --icon: "\e092"; }
+.theme-odoo .od-icon[data-wd-icon="qr"] { --icon: "\e093"; }
+.theme-odoo .od-icon[data-wd-icon="question"] { --icon: "\e094"; }
+.theme-odoo .od-icon[data-wd-icon="question_big"] { --icon: "\e095"; }
+.theme-odoo .od-icon[data-wd-icon="quotation_marks"] { --icon: "\e096"; }
+.theme-odoo .od-icon[data-wd-icon="recurring_maintenance"] { --icon: "\e097"; }
+.theme-odoo .od-icon[data-wd-icon="rocket"] { --icon: "\e098"; }
+.theme-odoo .od-icon[data-wd-icon="safe"] { --icon: "\e099"; }
+.theme-odoo .od-icon[data-wd-icon="salad_bowl"] { --icon: "\e09a"; }
+.theme-odoo .od-icon[data-wd-icon="scale"] { --icon: "\e09b"; }
+.theme-odoo .od-icon[data-wd-icon="search"] { --icon: "\e09c"; }
+.theme-odoo .od-icon[data-wd-icon="select_points"] { --icon: "\e09d"; }
+.theme-odoo .od-icon[data-wd-icon="send"] { --icon: "\e09e"; }
+.theme-odoo .od-icon[data-wd-icon="seo"] { --icon: "\e09f"; }
+.theme-odoo .od-icon[data-wd-icon="server"] { --icon: "\e0a0"; }
+.theme-odoo .od-icon[data-wd-icon="setting"] { --icon: "\e0a1"; }
+.theme-odoo .od-icon[data-wd-icon="shape"] { --icon: "\e0a2"; }
+.theme-odoo .od-icon[data-wd-icon="shield_check"] { --icon: "\e0a3"; }
+.theme-odoo .od-icon[data-wd-icon="ship"] { --icon: "\e0a4"; }
+.theme-odoo .od-icon[data-wd-icon="shirt"] { --icon: "\e0a5"; }
+.theme-odoo .od-icon[data-wd-icon="shoe"] { --icon: "\e0a6"; }
+.theme-odoo .od-icon[data-wd-icon="shooting_star"] { --icon: "\e0a7"; }
+.theme-odoo .od-icon[data-wd-icon="shop"] { --icon: "\e0a8"; }
+.theme-odoo .od-icon[data-wd-icon="snowflake"] { --icon: "\e0a9"; }
+.theme-odoo .od-icon[data-wd-icon="sock"] { --icon: "\e0aa"; }
+.theme-odoo .od-icon[data-wd-icon="sofa"] { --icon: "\e0ab"; }
+.theme-odoo .od-icon[data-wd-icon="speedmeter"] { --icon: "\e0ac"; }
+.theme-odoo .od-icon[data-wd-icon="sport_training"] { --icon: "\e0ad"; }
+.theme-odoo .od-icon[data-wd-icon="star"] { --icon: "\e0ae"; }
+.theme-odoo .od-icon[data-wd-icon="stopwatch"] { --icon: "\e0af"; }
+.theme-odoo .od-icon[data-wd-icon="stopwatch_rotate"] { --icon: "\e0b0"; }
+.theme-odoo .od-icon[data-wd-icon="strong_tattoo"] { --icon: "\e0b1"; }
+.theme-odoo .od-icon[data-wd-icon="suitcase"] { --icon: "\e0b2"; }
+.theme-odoo .od-icon[data-wd-icon="sun"] { --icon: "\e0b3"; }
+.theme-odoo .od-icon[data-wd-icon="supply_chain"] { --icon: "\e0b4"; }
+.theme-odoo .od-icon[data-wd-icon="switch_window"] { --icon: "\e0b5"; }
+.theme-odoo .od-icon[data-wd-icon="sync"] { --icon: "\e0b6"; }
+.theme-odoo .od-icon[data-wd-icon="tablet"] { --icon: "\e0b7"; }
+.theme-odoo .od-icon[data-wd-icon="tag"] { --icon: "\e0b8"; }
+.theme-odoo .od-icon[data-wd-icon="target"] { --icon: "\e0b9"; }
+.theme-odoo .od-icon[data-wd-icon="target_arrow"] { --icon: "\e0ba"; }
+.theme-odoo .od-icon[data-wd-icon="textbook"] { --icon: "\e0bb"; }
+.theme-odoo .od-icon[data-wd-icon="thumb_up_like"] { --icon: "\e0bc"; }
+.theme-odoo .od-icon[data-wd-icon="tick_circle"] { --icon: "\e0bd"; }
+.theme-odoo .od-icon[data-wd-icon="ticket"] { --icon: "\e0be"; }
+.theme-odoo .od-icon[data-wd-icon="tik_tok"] { --icon: "\e0bf"; }
+.theme-odoo .od-icon[data-wd-icon="training"] { --icon: "\e0c0"; }
+.theme-odoo .od-icon[data-wd-icon="transform"] { --icon: "\e0c1"; }
+.theme-odoo .od-icon[data-wd-icon="trend_up"] { --icon: "\e0c2"; }
+.theme-odoo .od-icon[data-wd-icon="trophy"] { --icon: "\e0c3"; }
+.theme-odoo .od-icon[data-wd-icon="truck"] { --icon: "\e0c4"; }
+.theme-odoo .od-icon[data-wd-icon="unbox"] { --icon: "\e0c5"; }
+.theme-odoo .od-icon[data-wd-icon="unhide"] { --icon: "\e0c6"; }
+.theme-odoo .od-icon[data-wd-icon="unlock"] { --icon: "\e0c7"; }
+.theme-odoo .od-icon[data-wd-icon="usb_drive"] { --icon: "\e0c8"; }
+.theme-odoo .od-icon[data-wd-icon="user"] { --icon: "\e0c9"; }
+.theme-odoo .od-icon[data-wd-icon="user_add"] { --icon: "\e0ca"; }
+.theme-odoo .od-icon[data-wd-icon="user_female"] { --icon: "\e0cb"; }
+.theme-odoo .od-icon[data-wd-icon="user_male"] { --icon: "\e0cc"; }
+.theme-odoo .od-icon[data-wd-icon="user_ok"] { --icon: "\e0cd"; }
+.theme-odoo .od-icon[data-wd-icon="vibrate_mode"] { --icon: "\e0ce"; }
+.theme-odoo .od-icon[data-wd-icon="video_camera"] { --icon: "\e0cf"; }
+.theme-odoo .od-icon[data-wd-icon="wallet"] { --icon: "\e0d0"; }
+.theme-odoo .od-icon[data-wd-icon="warehouse"] { --icon: "\e0d1"; }
+.theme-odoo .od-icon[data-wd-icon="warning_triangle"] { --icon: "\e0d2"; }
+.theme-odoo .od-icon[data-wd-icon="water"] { --icon: "\e0d3"; }
+.theme-odoo .od-icon[data-wd-icon="web_design"] { --icon: "\e0d4"; }
+.theme-odoo .od-icon[data-wd-icon="world_location"] { --icon: "\e0d5"; }
+.theme-odoo .od-icon[data-wd-icon="wrench"] { --icon: "\e0d6"; }
+.theme-odoo .od-icon[data-wd-icon="yoga"] { --icon: "\e0d7"; }
+.theme-odoo .od-icon[data-wd-icon="zap"] { --icon: "\e0d8"; }
+
+/*
+ * --- the app wall -------------------------------------------------------
+ * Odoo's app grid is not a set of font icons: each tile is the app's own
+ * 80px SVG on an `img-thumbnail`, and the whole cell lifts on hover. These
+ * are the exact numbers from odoo.com's stylesheet.
+ */
+.theme-odoo .od-apps-row {
+  display: flex;
+  flex-wrap: wrap;
+  /* `mt-5 mt-md-6` on the reference's row, against the container's gutter. */
+  margin: 3rem -1rem 0;
+}
+
+@media (min-width: 768px) {
+  .theme-odoo .od-apps-row {
+    margin-top: 4rem;
+  }
+}
+
+.theme-odoo .od-app-entry {
+  display: block;
+  flex: 0 0 auto;
+  width: 33.3333%;
+  padding: 0;
+  margin-bottom: 1rem;
+  text-align: center;
+  transition: all 0.2s ease-in-out;
+}
+
+@media (min-width: 576px) {
+  .theme-odoo .od-app-entry {
+    width: 25%;
+  }
+}
+
+@media (min-width: 992px) {
+  .theme-odoo .od-app-entry {
+    width: 16.6667%;
+  }
+}
+
+.theme-odoo .od-app-entry:hover {
+  transform: translateY(-0.25rem);
+}
+
+.theme-odoo .od-app-entry figure {
+  margin: 0 0 1rem;
+}
+
+/*
+ * `img-thumbnail rounded-1 mb-3`, exactly: 80px wide with 12px of padding, no
+ * border, `--border-radius-sm` (0.5rem) and the violet glow. Bootstrap's
+ * border-box sizing makes the 80px include the padding, so the artwork lands
+ * on a 56px content box and the tile is an 80px square.
+ */
+.theme-odoo .od-app-icon {
+  display: inline-block;
+  width: 80px;
+  height: auto;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  vertical-align: middle;
+  background-color: var(--od-surface);
+  border: 0 solid rgba(109, 40, 217, 0.15);
+  border-radius: 0.5rem;
+  box-shadow: 0 0.75rem 1.5rem rgba(109, 40, 217, 0.1);
+}
+
+.theme-odoo .od-app-caption {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--od-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+ * The easter egg, the way odoo.com ships it: one hand-drawn sheet of arrows,
+ * 1250px wide, pinned to the wall's own box and pulled 82.6px above it — the
+ * offset Odoo's `bottom: -270px` overlay lands on — with every arrow still
+ * pointing at the tile the reference points it at. Throwing the switch does
+ * nothing but show it: no fade, no layout shift. The names on the wall are
+ * ours; the arrows are the reference's, to the stroke.
+ */
+.theme-odoo .od-scrawls {
+  display: none;
+  position: absolute;
+  /* the row's own top margin, so this layer is exactly the row's box */
+  top: 3rem;
+  right: -1rem;
+  bottom: 0;
+  left: -1rem;
+  pointer-events: none;
+  z-index: 3;
+}
+
+@media (min-width: 768px) {
+  .theme-odoo .od-scrawls {
+    top: 4rem;
+  }
+}
+
+.theme-odoo .od-scrawls.is-on {
+  display: block;
+}
+
+/* The drawing is the reference's own 1250px sheet, and it needs the gutters
+   `col-xl-9` opens at `xl` to hang its names in: below that the wall fills the
+   viewport and both the sheet and its writing would be sliced by the section's
+   clip, so the switch is an `xl` control. */
+@media (max-width: 1199.98px) {
+  .theme-odoo .od-scrawls.is-on {
+    display: none;
+  }
+}
+
+/*
+ * The arrows themselves: the reference's strokes at the reference's own size
+ * and coordinates — 1250px across the 880px wall, centred on it, 82.6px above
+ * the first row — so each head points where odoo.com's points.
+ */
+.theme-odoo .od-arrows {
+  position: absolute;
+  left: 50%;
+  top: -82.6px;
+  width: 1250px;
+  height: auto;
+  max-width: none;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+/*
+ * One name, written where the reference writes its own: Odoo's doodle hand
+ * (Caveat, at the 2rem its lettering is drawn at, in its plum), centred on the
+ * spot the matching name holds in the drawing, so it stays with its arrow.
+ */
+.theme-odoo .od-scrawl {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  color: var(--od-violet);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 2rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* A name may instead hang its near edge on the anchor — either side of the
+   arrow it belongs to — so its own length never reaches into the stroke. */
+.theme-odoo .od-scrawl-left {
+  transform: translate(0, -50%);
+}
+
+.theme-odoo .od-scrawl-right {
+  transform: translate(-100%, -50%);
+}
+
+.theme-odoo .od-notif {
+  position: relative;
+  padding: 1rem;
+  font-size: 0.875rem;
+  background-color: var(--od-surface);
+  border-radius: 0.75rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  transition: all 0.2s ease-in-out;
+}
+
+@media (max-width: 767.98px) {
+  .theme-odoo .od-notif {
+    text-align: left;
+  }
+}
+
+@media (min-width: 768px) {
+  .theme-odoo .od-notif {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem;
+    border-radius: 50rem;
+  }
+}
+
+/* The link that covers the whole card, the way Bootstrap's does. */
+.theme-odoo .od-stretched::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.theme-odoo .od-notif:hover {
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+  transform: translateY(-0.125rem);
+}
+
+/* The little sketched corner that sits above the switch. */
+.theme-odoo .od-corner {
+  position: relative;
+  padding-left: 1rem;
+}
+
+.theme-odoo .od-corner::after {
+  content: "";
+  position: absolute;
+  top: -40px;
+  left: -30px;
+  width: 60px;
+  height: 60px;
+  background-image: url("/img/odoo/corner_4.svg");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+}
+
+@media (max-width: 991.98px) {
+  .theme-odoo .od-corner::after {
+    display: none;
+  }
+}
+
+/*
+ * The Bootstrap form-switch, rebuilt: a 3rem pill whose thumb is an inline
+ * circle, sliding from 0% to 100% via background-position. Odoo sets no
+ * transition on it, so the knob jumps — that is the real behaviour.
+ */
+.theme-odoo .od-switch {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 1.5rem;
+  margin: 0;
+  vertical-align: top;
+  background-color: var(--od-surface);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23111827'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: 0% 50%;
+  background-size: contain;
+  border: 1px solid rgba(23, 16, 43, 0.15);
+  border-radius: 32px;
+  cursor: pointer;
+  transition: none;
+}
+
+.theme-odoo .od-switch:checked {
+  background-color: var(--od-violet-solid);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23FFF'/%3e%3c/svg%3e");
+  background-position: 100% 50%;
+  border-color: var(--od-violet-solid);
+}
+
+.theme-odoo .od-switch-label {
+  padding: 0 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--od-violet);
+  cursor: pointer;
+}
+
+/* The 10rem corners that close the long grey runs on odoo.com. */
+.theme-odoo .od-round-bottom {
+  border-bottom-left-radius: 10rem;
+  border-bottom-right-radius: 10rem;
+}
+
+/*
+ * --- the doodles, the fireworks and the feature tile --------------------
+ * The handwritten note under the hero is Odoo's `x_wd_doodle`: Caveat 2rem
+ * in plum, centred, with the doodled arrow above it. Below `lg` Odoo drops it
+ * back into the flow and hides the arrow.
+ */
+.theme-odoo .od-doodle {
+  display: block;
+  color: var(--od-violet);
+  font-family: var(--font-display);
+  font-size: calc(1.325rem + 0.9vw);
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1.1;
+  text-align: center;
+}
+
+@media (min-width: 1200px) {
+  .theme-odoo .od-doodle {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 991.98px) {
+  .theme-odoo .od-doodle {
+    position: relative !important;
+    inset: auto !important;
+    margin: 0 auto;
+    padding: 2rem 0 1rem;
+    transform: none !important;
+    rotate: none !important;
+  }
+  .theme-odoo .od-doodle img {
+    display: none !important;
+  }
+}
+
+/* `x_wd_display_sup`: the small word a display heading carries above it. */
+.theme-odoo .od-sup {
+  position: absolute;
+  top: -2.5rem;
+  font-size: 1.5rem;
+  color: var(--od-gold);
+}
+
+/* `x_wd_display_fireworks_01`: a burst either side of the first word. */
+.theme-odoo .od-fireworks {
+  position: relative;
+}
+
+.theme-odoo .od-fireworks::before {
+  content: url("/img/odoo/fireworks_01a.svg");
+  position: absolute;
+  top: auto;
+  left: -7rem;
+  bottom: -1rem;
+  right: auto;
+  pointer-events: none;
+}
+
+.theme-odoo .od-fireworks::after {
+  content: url("/img/odoo/fireworks_01b.svg");
+  position: absolute;
+  top: auto;
+  left: 100%;
+  bottom: 0;
+  right: auto;
+  pointer-events: none;
+}
+
+/* `s_wd_features_item`: the white tile Odoo wraps each principle in. */
+.theme-odoo .od-card {
+  position: relative;
+  margin-bottom: 2rem;
+  padding: 2rem;
+  background-color: var(--od-surface);
+  border: 1px solid #e9e3f7;
+  border-radius: 0.75rem;
+}
+
+.theme-odoo .od-card-title {
+  margin-bottom: 1.5rem;
+}
+
+.theme-odoo .od-card-icon {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .theme-odoo .od-card-title {
+    margin-right: 75px;
+  }
+  .theme-odoo .od-card-icon {
+    position: absolute;
+    top: 0;
+    right: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 70px;
+    height: 70px;
+    background-color: #f6f2fe;
+    border-bottom-right-radius: 50%;
+    border-bottom-left-radius: 50%;
+  }
+  .theme-odoo .od-card-icon svg {
+    height: 35px;
+    width: 35px;
+  }
+}
+
+/*
+ * The section shapes: `o_illustration_doodle_03` is the white wave odoo.com
+ * paints across the top of its app wall, `_02` the orange doodle behind the
+ * productivity band. Both are 100%-wide, top-anchored, and sit under the
+ * content.
+ */
+.theme-odoo .od-shape {
+  position: absolute;
+  inset: 0;
+  background-repeat: no-repeat;
+  background-position: 50% 0%;
+  background-size: 100% auto;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.theme-odoo .od-shape-03 {
+  background-image: url("/img/odoo/shape_doodle_03.svg");
+}
+
+.theme-odoo .od-shape-02 {
+  background-image: url("/img/odoo/shape_doodle_02.svg");
+}
+
+/*
+ * `img-thumbnail` as the marketing pages use it: 0.75rem of white padding, a
+ * 0.75rem radius, no border and the violet glow. The screenshots inside the
+ * productivity collage fill their grid cell (`object-fit: cover`).
+ */
+.theme-odoo .od-shot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0.75rem;
+  object-fit: cover;
+  background-color: var(--od-surface);
+  border-radius: 0.75rem;
+  box-shadow: 0 0.75rem 1.5rem rgba(109, 40, 217, 0.1);
+}
+
+/*
+ * The mat the collage's screenshots sit in — `img-thumbnail`'s 0.75rem of
+ * white and its violet glow — as a wrapper, so the drawn screens under the
+ * collage are framed exactly like the captures above them.
+ */
+.theme-odoo .od-shot-frame {
+  display: flex;
+  align-items: center;
+  min-height: 13rem;
+  padding: 0.75rem;
+  background-color: var(--od-surface);
+  border-radius: 0.75rem;
+  box-shadow: 0 0.75rem 1.5rem rgba(109, 40, 217, 0.1);
+}
+
+.theme-odoo .od-shot-frame > * {
+  width: 100%;
+}
+
+/*
+ * The four drawn screens in the collage below it are scaled up with their cell,
+ * so their rows stay in proportion to the tiles above, and their layout width is
+ * both cut by the scale factor and inset, which leaves the empty mat around the
+ * screen that the neighbouring cards are allowed to overlap.
+ */
+.theme-odoo .od-panel-shot {
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-odoo .od-panel-shot > * {
+  width: calc(88% / 1.45);
+  transform: scale(1.45);
+  transform-origin: center center;
+}
+
+/* `.x_wd .lead`: 1.25rem, 300 weight, stepping up to 1.5rem at `md`. */
+.theme-odoo .od-lead {
+  font-size: 1.25rem;
+  font-weight: 300;
+}
+
+@media (min-width: 768px) {
+  .theme-odoo .od-lead {
+    font-size: 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-odoo .od-btn {
+    transition: none;
+  }
+}
+
+/*
+ * ------------------------------------------------------------------ themes
+ *
+ * The day/night switch in the landing header owns everything below. Day is the
+ * page odoo.com drew; night is BIZLIT's own violet after dark. Both classes sit
+ * on the same element — the page wrapper — so the signed-in workspace inherits
+ * neither. Surfaces, marker inks and the line art all re-point at tokens here.
+ */
+.theme-odoo {
+  --od-page: #fff;
+  --od-surface: #fff;
+  --od-surface-soft: #fbf9ff;
+  --od-violet-solid: #6d28d9;
+  --od-accent: #9333ea;
+  --od-tone-violet-bg: #f1eafe;
+  --od-tone-violet-fg: #6d28d9;
+  --od-tone-orchid-bg: #f6ecfe;
+  --od-tone-orchid-fg: #9333ea;
+  --od-tone-indigo-bg: #eceeff;
+  --od-tone-indigo-fg: #4f46e5;
+  --od-tone-fuchsia-bg: #fbeafd;
+  --od-tone-fuchsia-fg: #a21caf;
+  --od-tone-gold-bg: #fdf5e4;
+  --od-tone-gold-fg: #a9740c;
+  /* The wall of businesses under the proof band, palest to mid violet. */
+  --od-tile-1: #f1eafe;
+  --od-tile-2: #e6dbfd;
+  --od-tile-3: #ddd6fe;
+  --od-tile-4: #c9b8fb;
+  --od-tile-5: #b89df8;
+  --od-tile-6: #ede9fe;
+  --od-tile-7: #f6f3fd;
+  --od-tile-8: #a78bfa;
+}
+
+/* The switch: a track, a thumb that slides, a sun and a moon on it. */
+.theme-odoo .od-theme-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 3.5rem;
+  height: 2rem;
+  padding: 0 0.1875rem;
+  background-color: var(--od-band);
+  border: 1px solid var(--od-border);
+  border-radius: 999px;
+  color: var(--od-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease-in-out,
+    border-color 0.2s ease-in-out;
+}
+
+.theme-odoo .od-theme-switch:hover {
+  border-color: var(--od-violet);
+}
+
+.theme-odoo .od-theme-switch:focus-visible {
+  outline: 2px solid var(--od-violet);
+  outline-offset: 2px;
+}
+
+.theme-odoo .od-theme-switch-thumb {
+  position: absolute;
+  top: 0.1875rem;
+  left: 0.1875rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  background-color: var(--od-surface);
+  border-radius: 999px;
+  box-shadow: 0 0.125rem 0.375rem rgba(23, 16, 43, 0.22);
+  transition: transform 0.22s ease-out;
+}
+
+.theme-odoo .od-theme-switch[aria-checked="true"] .od-theme-switch-thumb {
+  transform: translateX(1.625rem);
+}
+
+.theme-odoo .od-theme-switch-cell {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  transition: color 0.2s ease-in-out;
+}
+
+.theme-odoo .od-theme-switch-cell[data-on="true"] {
+  color: var(--od-ink);
+}
+
+/* Night: aubergine page, violet ink, gold markers left alone. */
+.theme-odoo.theme-odoo-dark {
+  color-scheme: dark;
+  background-color: var(--od-page);
+  --od-page: #100b1f;
+  --od-surface: #1c1333;
+  --od-surface-soft: #221741;
+  --od-violet-solid: #7c3aed;
+  --od-accent: #c084fc;
+  --od-ink: #f3effe;
+  --od-body: #c9c2e0;
+  --od-muted: #948cb0;
+  --od-band: #17102b;
+  --od-band-soft: #1a1230;
+  --od-border: #2f2452;
+  --od-violet: #a78bfa;
+  --od-violet-deep: #c4b5fd;
+  --od-orchid: #c084fc;
+  --od-rose: #f472b6;
+  --od-indigo: #a5b4fc;
+  --od-footer: #0c0818;
+  --od-footer-deep: #070411;
+  /*
+   * The bold highlighter is re-inked violet for the night, so the words it
+   * sits behind can stay light the way every other word on the page is.
+   * Same artwork, different ink.
+   */
+  --od-marker-yellow: url("/img/odoo/highlights/violet_highlight_bold_05.svg");
+  --od-tone-violet-bg: #2a1c4f;
+  --od-tone-violet-fg: #c4b5fd;
+  --od-tone-orchid-bg: #321e5c;
+  --od-tone-orchid-fg: #d8b4fe;
+  --od-tone-indigo-bg: #232455;
+  --od-tone-indigo-fg: #a5b4fc;
+  --od-tone-fuchsia-bg: #3a1a4d;
+  --od-tone-fuchsia-fg: #f0abfc;
+  --od-tone-gold-bg: #3a2c14;
+  --od-tone-gold-fg: #f2c76b;
+  /* The same wall at night: aubergine discs with the icons still on them. */
+  --od-tile-1: #241a44;
+  --od-tile-2: #2a1c4f;
+  --od-tile-3: #32205c;
+  --od-tile-4: #3a2470;
+  --od-tile-5: #2e2154;
+  --od-tile-6: #1f1740;
+  --od-tile-7: #382a5e;
+  --od-tile-8: #452a86;
+}
+
+.theme-odoo.theme-odoo-dark .od-btn-light {
+  background-color: #241a44;
+  border-color: #2f2452;
+  color: #ddd6fe;
+}
+
+.theme-odoo.theme-odoo-dark .od-btn-light:hover {
+  background-color: #2d2153;
+  color: #efe9ff;
+}
+
+.theme-odoo.theme-odoo-dark .od-btn-primary:hover {
+  background-color: #8b5cf6;
+  border-color: #8b5cf6;
+}
+
+.theme-odoo.theme-odoo-dark .od-switch {
+  background-color: #241a44;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23E9E3F7'/%3e%3c/svg%3e");
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.theme-odoo.theme-odoo-dark .od-card-icon {
+  background-color: #241a44;
+}
+
+.theme-odoo.theme-odoo-dark .od-theme-switch {
+  background-color: #221741;
+}
+
+.theme-odoo.theme-odoo-dark .od-theme-switch-thumb {
+  background-color: #cdbdfd;
+  box-shadow: 0 0.125rem 0.375rem rgba(0, 0, 0, 0.45);
+}
+
+.theme-odoo.theme-odoo-dark .od-tile-shadow {
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 6px 14px -8px rgba(0, 0, 0, 0.65);
+}
+
+.theme-odoo.theme-odoo-dark .od-app-icon,
+.theme-odoo.theme-odoo-dark .od-shot,
+.theme-odoo.theme-odoo-dark .od-shot-frame {
+  box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.45);
+}
+
+
+/*
+ * The wave is white artwork, so at night it is masked and painted in the
+ * page's own colour rather than dimmed: its flat top then meets the hero
+ * seamlessly and only the curve reads against the band below it.
+ */
+.theme-odoo.theme-odoo-dark .od-shape-03 {
+  opacity: 1;
+  background-color: var(--od-page);
+  background-image: none;
+  -webkit-mask-image: url("/img/odoo/shape_doodle_03.svg");
+  mask-image: url("/img/odoo/shape_doodle_03.svg");
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 50% 0%;
+  mask-position: 50% 0%;
+  -webkit-mask-size: 100% auto;
+  mask-size: 100% auto;
+}
+
+/* The orange doodle under the level-up band is a texture, not an edge. */
+.theme-odoo.theme-odoo-dark .od-shape-02 {
+  opacity: 0.05;
+}
+
+/* Violet line art goes up in value so it still draws on aubergine. */
+.theme-odoo.theme-odoo-dark .od-doodle img {
+  filter: brightness(1.3) saturate(1.05);
+}
+
+/*
+ * The level-up panels are captures of the workspace, so their mats stay white
+ * at night: a screen framed on the dark band, not a hole in the card.
+ */
+.theme-odoo.theme-odoo-dark .od-panel-shot,
+.theme-odoo.theme-odoo-dark .od-mobile-panels .od-shot-frame {
+  background-color: #fff;
 }

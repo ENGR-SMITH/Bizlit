@@ -306,7 +306,8 @@ describe("BIZLIT app", () => {
     const content = text();
     expect(content).toContain("BIZLIT");
     expect(content).toContain("Start free");
-    expect(content).toContain("Watching for you");
+    // The sources band that replaced the old "Watching for you" grid.
+    expect(content).toContain("Competitor sites");
     expect(content).toContain("Before you sign up.");
 
     // Screen gallery renders the workspace layouts with sample data.
